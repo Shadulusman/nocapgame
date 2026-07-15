@@ -1,4 +1,4 @@
-const CACHE = "bhedi-v3";
+const CACHE = "bhedi-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -26,6 +26,9 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
+  // live data (the open-rooms list) must never be cached — cache-first below
+  // would otherwise freeze it at whatever it was on the very first fetch
+  if (new URL(req.url).pathname === "/rooms") { e.respondWith(fetch(req)); return; }
   // network-first for navigation, cache-first for the rest
   if (req.mode === "navigate") {
     e.respondWith(fetch(req).catch(() => caches.match("./index.html")));

@@ -50,7 +50,16 @@ try:
             pg.fill("#codeIn",code); pg.click("#goBtn"); pg.wait_for_timeout(900)
         host.wait_for_timeout(500)
         ok("3 players joined via one deploy", host.locator(".rost").count()==3)
+
+        # public room browser: this lobby room should be listed while open
+        rooms_open = p2.evaluate("async()=>{const r=await fetch('/rooms');return await r.json();}")
+        ok("open room browser lists our lobby room", any(x["code"]==code for x in rooms_open))
+        listed = next(x for x in rooms_open if x["code"]==code)
+        ok("listed room shows correct player count", listed["players"]==3)
+
         host.click("#startOnline"); host.wait_for_timeout(900)
+        rooms_after_start = p2.evaluate("async()=>{const r=await fetch('/rooms');return await r.json();}")
+        ok("room drops off the browser once the game starts", not any(x["code"]==code for x in rooms_after_start))
         for pg in pages: pg.click("#roleCard"); pg.wait_for_timeout(600)
         imp = None
         for pg in pages:

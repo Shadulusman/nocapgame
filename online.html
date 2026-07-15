@@ -194,6 +194,13 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .starter .l{font-size:12px;color:var(--muted);letter-spacing:.04em;}
 .starter .n{font-family:var(--ff-disp);font-weight:700;font-size:22px;margin-top:3px;color:var(--gold-hi);}
 
+/* ---------- Vote timer ---------- */
+.vote-timer{margin:0 0 18px;}
+.vt-bar{height:6px;border-radius:100px;background:var(--surface-2);overflow:hidden;}
+.vt-fill{height:100%;width:100%;border-radius:100px;background:linear-gradient(90deg,var(--gold-deep),var(--gold-hi));transition:width 1s linear,background .3s;}
+.vt-fill.warn{background:linear-gradient(90deg,var(--crimson-deep),var(--crimson));}
+.vt-txt{font-family:var(--ff-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-align:center;margin-top:8px;}
+
 /* ---------- Vote grid ---------- */
 .vote-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
 .vote-cell{display:flex;align-items:center;gap:11px;padding:15px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);cursor:pointer;text-align:left;transition:.15s;}
@@ -262,6 +269,18 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
   padding:18px;font-family:var(--ff-mono);font-weight:700;font-size:30px;letter-spacing:.3em;text-align:center;text-transform:uppercase;outline:none;transition:.18s;}
 .code-input::placeholder{color:var(--muted-2);letter-spacing:.2em;}
 .code-input:focus{border-color:var(--gold-deep);box-shadow:0 0 0 3px rgba(245,181,71,.13);}
+
+/* public room browser */
+.open-rooms{display:flex;flex-direction:column;gap:8px;}
+.room-card{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 15px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);cursor:pointer;text-align:left;
+  transition:.15s;font-family:var(--ff-body);color:var(--cream);}
+.room-card:active{transform:scale(.98);}
+.room-card .rc-l{min-width:0;}
+.room-card .rc-code{font-family:var(--ff-mono);font-weight:700;font-size:16px;letter-spacing:.1em;color:var(--gold-hi);}
+.room-card .rc-host{font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.room-card .rc-count{font-family:var(--ff-mono);font-size:12px;color:var(--muted);flex:none;background:var(--ink-2);
+  border:1px solid var(--line);border-radius:100px;padding:5px 10px;}
 .field{width:100%;background:var(--surface);border:1px solid var(--line);color:var(--cream);border-radius:var(--r-md);
   padding:14px 15px;font-family:var(--ff-body);font-size:15px;outline:none;transition:.18s;}
 .field:focus{border-color:var(--gold-deep);box-shadow:0 0 0 3px rgba(245,181,71,.13);}
@@ -309,14 +328,19 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .secret .peek{border:1px solid var(--line);background:var(--ink-2);color:var(--muted);border-radius:100px;padding:8px 12px;font-size:11.5px;font-weight:600;cursor:pointer;flex:none;}
 .blurred{filter:blur(9px);}
 
-/* clue feed */
+/* clue feed — one row per person, their words laid out alongside each other
+   in round order, instead of one row per clue stacked chronologically. Makes
+   it possible to scan "what did X say" without hunting through the whole feed. */
 .feed{display:flex;flex-direction:column;gap:8px;width:100%;}
-.fitem{display:flex;align-items:flex-start;gap:11px;padding:12px 13px;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);animation:pop .26s cubic-bezier(.2,1.3,.4,1);}
-.fitem .av{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:12px;color:#241706;flex:none;}
-.fitem .b{flex:1;min-width:0;}
-.fitem .n{font-size:12px;color:var(--muted);margin-bottom:4px;}
-.fitem .ws{display:flex;flex-wrap:wrap;gap:6px;}
-.fitem .wd{font-family:var(--ff-disp);font-weight:600;font-size:14px;padding:5px 10px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--line);}
+.fg-row{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);animation:pop .26s cubic-bezier(.2,1.3,.4,1);}
+.fg-row.turn-now{border-color:rgba(245,181,71,.45);background:linear-gradient(180deg,rgba(245,181,71,.08),transparent);}
+.fg-who{display:flex;align-items:center;gap:8px;flex:none;width:88px;min-width:0;}
+.fg-who .av{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:11.5px;color:#241706;flex:none;}
+.fg-nm{font-size:12.5px;color:var(--cream);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.fg-words{display:flex;gap:6px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;}
+.fg-words::-webkit-scrollbar{display:none;}
+.fg-cell{font-family:var(--ff-disp);font-weight:600;font-size:13px;padding:5px 10px;border-radius:100px;background:rgba(255,255,255,.05);border:1px solid var(--line);flex:none;white-space:nowrap;}
+.fg-cell.empty{color:var(--muted-2);background:transparent;border-style:dashed;font-weight:400;}
 .feed-empty{text-align:center;color:var(--muted-2);font-size:13px;font-style:italic;padding:20px 0;}
 
 /* clue inputs */
@@ -389,6 +413,14 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
       <div class="section hidden" id="joinBlock">
         <p class="flabel">Room code</p>
         <input class="code-input" id="codeIn" type="text" placeholder="ABCD" maxlength="4" autocomplete="off" autocapitalize="characters" enterkeyhint="go" />
+
+        <div class="sec-head" style="margin-top:22px;">
+          <h3>Open rooms</h3>
+          <button class="linkbtn" id="refreshRooms">Refresh</button>
+        </div>
+        <div class="open-rooms" id="openRooms">
+          <p class="empty-note">Looking for open rooms…</p>
+        </div>
       </div>
       <div style="height:8px"></div>
     </div>
@@ -532,6 +564,10 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
         <h2 style="font-size:25px;margin-bottom:6px;">Who's the bhedi?</h2>
         <p class="pass-sub" style="margin:0;">Everyone votes. Results show when the last vote lands.</p>
       </div>
+      <div class="vote-timer" id="voteTimer">
+        <div class="vt-bar"><div class="vt-fill" id="voteTimerFill"></div></div>
+        <div class="vt-txt" id="voteTimerTxt">30s to vote</div>
+      </div>
       <div class="vote-grid" id="oVoteGrid"></div>
       <div class="vprog" id="voteProg">—</div>
       <div style="height:14px"></div>
@@ -588,6 +624,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
    (Override for local dev: localStorage.setItem("bhedi_server","ws://localhost:8787")) */
 const SERVER_URL = localStorage.getItem("bhedi_server") ||
   (location.protocol === "https:" ? "wss://" : "ws://") + location.host;
+const HTTP_BASE = SERVER_URL.replace(/^wss:/, "https:").replace(/^ws:/, "http:");
 
 const $ = (s, el=document) => el.querySelector(s);
 const $$ = (s, el=document) => [...el.querySelectorAll(s)];
@@ -618,6 +655,7 @@ const S = {
   state:null, prev:null,
   roleSeen:false, peeked:true,
   connected:false, retry:0, intentionalClose:false,
+  voteTimerHandle:null, openRoomsHandle:null,
 };
 
 function go(id){
@@ -681,14 +719,40 @@ function send(o){ if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)
 $("#mCreate").addEventListener("click", () => {
   S.mode="create"; $("#mCreate").classList.add("on"); $("#mJoin").classList.remove("on");
   $("#joinBlock").classList.add("hidden"); $("#goBtn").textContent="Make a room"; buzz(8);
+  clearInterval(S.openRoomsHandle);
 });
 $("#mJoin").addEventListener("click", () => {
   S.mode="join"; $("#mJoin").classList.add("on"); $("#mCreate").classList.remove("on");
   $("#joinBlock").classList.remove("hidden"); $("#goBtn").textContent="Join room"; buzz(8);
   setTimeout(()=>$("#codeIn").focus(), 120);
+  fetchOpenRooms();
+  clearInterval(S.openRoomsHandle);
+  S.openRoomsHandle = setInterval(fetchOpenRooms, 4000);
 });
 $("#codeIn").addEventListener("input", e => { e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,""); });
 $("#nameIn").value = localStorage.getItem("bhedi_name") || "";
+
+/* ---------- public room browser ---------- */
+function fetchOpenRooms(){
+  fetch(HTTP_BASE + "/rooms").then(r => r.json()).then(renderOpenRooms)
+    .catch(() => { $("#openRooms").innerHTML = `<p class="empty-note">Couldn't reach the server for the room list.</p>`; });
+}
+function renderOpenRooms(list){
+  const box = $("#openRooms");
+  if (!list.length) { box.innerHTML = `<p class="empty-note">No open rooms right now — make one!</p>`; return; }
+  box.innerHTML = list.map(r => `
+    <button class="room-card" data-code="${r.code}">
+      <div class="rc-l"><div class="rc-code">${r.code}</div><div class="rc-host">${r.hostName}'s room</div></div>
+      <span class="rc-count">${r.players}/${r.maxPlayers}</span>
+    </button>`).join("");
+}
+$("#openRooms").addEventListener("click", e => {
+  const c = e.target.closest(".room-card"); if (!c) return;
+  $("#codeIn").value = c.dataset.code;
+  buzz(10);
+  $("#goBtn").click();
+});
+$("#refreshRooms").addEventListener("click", () => { buzz(8); fetchOpenRooms(); });
 
 $("#goBtn").addEventListener("click", () => {
   const name = $("#nameIn").value.trim();
@@ -739,6 +803,7 @@ function leave(){
   S.intentionalClose = true;
   localStorage.removeItem("bhedi_session");
   if (S.ws) S.ws.close();
+  clearInterval(S.voteTimerHandle);
   S.state=null; S.code=""; S.youId=null; S.roleSeen=false;
   go("entry");
 }
@@ -805,6 +870,9 @@ function render(){
   const s = S.state; if(!s) return;
   const prevStatus = S.prev && S.prev.status;
 
+  if (s.status !== "voting") clearInterval(S.voteTimerHandle);
+  clearInterval(S.openRoomsHandle); // we've left the entry screen, no need to keep polling it
+
   if (s.status === "lobby") {
     if (prevStatus !== "lobby") { S.roleSeen = false; S.peeked = true; }
     renderLobby(); go("lobby");
@@ -869,14 +937,22 @@ function renderLobby(){
   }
 }
 
-function feedHtml(clues, players){
-  if (!clues.length) return `<div class="feed-empty">No clues yet — first player is typing.</div>`;
-  const idx = {}; (players||[]).forEach((p,i)=> idx[p.name]=i);
-  return clues.map(c => {
-    const i = idx[c.name] ?? 0;
-    return `<div class="fitem"><span class="av" style="background:${AV[i%AV.length]}">${initials(c.name)}</span>
-      <div class="b"><div class="n">${c.name}</div>
-      <div class="ws">${c.words.map(w=>`<span class="wd">${w}</span>`).join("")}</div></div></div>`;
+// One row per person, their words laid out horizontally in round order —
+// easier to track "what did X say" than a chronological list where everyone's
+// single clues are interleaved and stacked one below another.
+function feedGridHtml(r, highlightTurn){
+  if (!r.clues.length) return `<div class="feed-empty">No clues yet — first player is typing.</div>`;
+  return r.order.map((p,i) => {
+    const mine = r.clues.filter(c => c.playerId === p.id);
+    const isCurrent = highlightTurn && p.id === r.turnPlayerId;
+    const cells = Array.from({length: r.roundsTotal}, (_,ri) => {
+      const c = mine.find(m => m.roundNo === ri);
+      return c ? `<span class="fg-cell">${c.words[0]}</span>` : `<span class="fg-cell empty">·</span>`;
+    }).join("");
+    return `<div class="fg-row${isCurrent ? " turn-now" : ""}">
+      <div class="fg-who"><span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}</span><span class="fg-nm">${p.name}</span></div>
+      <div class="fg-words">${cells}</div>
+    </div>`;
   }).join("");
 }
 
@@ -915,7 +991,7 @@ function renderPlay(){
   $("#turnL").textContent = mine ? "It's your turn" : "Now typing";
   $("#turnN").textContent = mine ? "Type your clue" : (r.turnName || "—");
 
-  $("#feed").innerHTML = feedHtml(r.clues, s.players);
+  $("#feed").innerHTML = feedGridHtml(r, true);
 
   // new clue sound
   const prevN = S.prev && S.prev.round ? S.prev.round.clues.length : 0;
@@ -958,8 +1034,24 @@ function renderVote(){
     g.appendChild(el);
   });
   $("#voteProg").textContent = `${r.votesIn} of ${r.totalVoters} voted`;
-  $("#voteFeed").innerHTML = feedHtml(r.clues, s.players);
+  $("#voteFeed").innerHTML = feedGridHtml(r);
   $("#forceFooter").classList.toggle("hidden", !s.isHost);
+
+  clearInterval(S.voteTimerHandle);
+  if (r.voteDeadline) {
+    const VOTE_MS = 30000;
+    const tick = () => {
+      const remain = Math.max(0, r.voteDeadline - Date.now());
+      const secs = Math.ceil(remain / 1000);
+      const pct = Math.max(0, Math.min(100, (remain / VOTE_MS) * 100));
+      $("#voteTimerFill").style.width = pct + "%";
+      $("#voteTimerFill").classList.toggle("warn", secs <= 10);
+      $("#voteTimerTxt").textContent = remain > 0 ? `${secs}s to vote` : "Revealing…";
+      if (remain <= 0) clearInterval(S.voteTimerHandle);
+    };
+    tick();
+    S.voteTimerHandle = setInterval(tick, 250);
+  }
 }
 
 function renderResults(){

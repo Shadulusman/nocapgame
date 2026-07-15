@@ -122,10 +122,13 @@ peek at the answer by opening their browser's dev tools.
 
 ## How the game plays
 
-1. Host makes a room, shares the 4-letter code.
+1. Host makes a room, shares the 4-letter code — or a friend just picks it from
+   the "Open rooms" list on the Join screen, no code needed.
 2. Everyone taps their card. Civilians see the secret word; the bhedi doesn't.
-3. Players take turns typing clue words. Everyone sees them appear live.
-4. After the set number of turns, everyone votes.
+3. Players take turns typing one clue word each. Everyone sees them appear live,
+   grouped by person so it's easy to follow who said what.
+4. After the set number of turns, everyone votes. Voting auto-resolves after
+   30 seconds even if someone's still deciding.
 5. Group wins by voting out the bhedi. **A tie means nobody goes out - the bhedi survives.**
 
 Everyone types one clue word per turn — the turn order visibly cycles through

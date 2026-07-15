@@ -14,9 +14,19 @@ try:
     with sync_playwright() as p:
         b = p.chromium.launch(args=["--no-sandbox"])
         ctxs, pages = [], []
+        ws_frames = {}  # page -> list of raw websocket frame payloads it received
         for i in range(3):
             c = b.new_context(viewport={"width":390,"height":844}, device_scale_factor=2)
             pg = c.new_page()
+            frames = []
+            ws_frames[pg] = frames
+            # capture every raw frame the socket receives — the strongest possible
+            # check that the imposter's device never receives the secret word is to
+            # inspect the actual network payloads, not just the parsed page HTML
+            # (which also contains static JS/CSS source and can false-positive on
+            # an unrelated word, e.g. a code comment coincidentally matching the
+            # round's random secret word).
+            pg.on("websocket", lambda ws, frames=frames: ws.on("framereceived", lambda payload, frames=frames: frames.append(payload)))
             pg.add_init_script("localStorage.setItem('bhedi_server','ws://127.0.0.1:8821')")
             pg.goto(BASE); pg.wait_for_timeout(600)
             ctxs.append(c); pages.append(pg)
@@ -57,15 +67,18 @@ try:
         civ_page = next(pg for pg,nm in zip(pages,["Arjun","Meera","Rahul"]) if nm!=imp_name)
         civ_page.screenshot(path="ui_role_civilian.png")
 
-        # verify imposter's DOM never contains the word
+        # verify the imposter's device never received the word — check the actual
+        # raw websocket frames, not the page HTML (which also contains static JS/CSS
+        # source text unrelated to any round and can coincidentally match)
         word = None
         for pg,nm in zip(pages,["Arjun","Meera","Rahul"]):
             if roles[nm]=="civilian":
                 word = pg.evaluate("() => S.state.round.yourWord"); break
         imp_word = imp_page.evaluate("() => S.state.round.yourWord")
         ok("imposter client has null word", imp_word is None)
-        imp_html = imp_page.content()
-        ok(f"secret word '{word}' absent from imposter's page", word.lower() not in imp_html.lower())
+        imp_frames_text = " ".join(str(f) for f in ws_frames[imp_page]).lower()
+        ok(f"secret word '{word}' absent from imposter's received network frames",
+           word.lower() not in imp_frames_text)
 
         # proceed to play
         for pg in pages: pg.click("#roleGo"); pg.wait_for_timeout(300)
@@ -92,9 +105,13 @@ try:
             guard += 1
         ok("6 clue turns sent (2 rounds x 3 players)", guard == 6)
         host.wait_for_timeout(600)
-        ok("everyone sees 6 clues live", all(pg.locator(".fitem").count()>=6 for pg in pages))
-        ok("1 word per clue rendered", host.locator(".fitem").first.locator(".wd").count()==1)
         ok("advanced to vote screen", "active" in host.locator("#s-ovote").get_attribute("class"))
+        # feed groups by person now: one row per player, their words alongside each other
+        vote_rows = host.locator("#voteFeed .fg-row")
+        ok("3 player rows in the clue feed (grouped, not one-per-clue)", vote_rows.count()==3)
+        ok("no empty clue cells left — everyone's 2 rounds filled in", host.locator("#voteFeed .fg-cell.empty").count()==0)
+        ok("2 words per person row (2 clue rounds)", vote_rows.first.locator(".fg-cell").count()==2)
+        ok("vote countdown timer showing", "to vote" in host.inner_text("#voteTimerTxt").lower())
         host.screenshot(path="ui_vote.png")
 
         # all vote the imposter

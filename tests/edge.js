@@ -1,4 +1,4 @@
-process.env.PORT = "8812"; process.env.HOST = "127.0.0.1";
+process.env.PORT = "8812"; process.env.HOST = "127.0.0.1"; process.env.VOTE_SECONDS = "1";
 require("../server.js");
 const WebSocket = require("ws");
 const URL = "ws://127.0.0.1:8812";
@@ -40,6 +40,22 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
   ok("tie -> results reached", cs[0].state.status==="results");
   ok("tie -> nobody voted out", cs[0].state.results.votedOutId===null);
   ok("tie -> imposter survives", cs[0].state.results.imposterWon===true);
+  cs.forEach(c=>c.close()); await wait(300);
+
+  // ---- VOTE TIMEOUT AUTO-RESOLVES (VOTE_SECONDS=1 for this test run) ----
+  cs = await room(3,["A","B","C"]);
+  cs[0].sendj({type:"settings",settings:{rounds:1}}); await wait(200);
+  cs[0].sendj({type:"start"}); await wait(300);
+  g=0;
+  while(cs[0].state.status==="playing" && g++<20){
+    const cur=cs.find(x=>x.youId===cs[0].state.round.turnPlayerId);
+    cur.sendj({type:"clue",words:["w"]}); await wait(150);
+  }
+  ok("reached voting", cs[0].state.status==="voting");
+  ok("voteDeadline is set", typeof cs[0].state.round.voteDeadline==="number");
+  // nobody votes — timeout should resolve it on its own
+  await wait(1600);
+  ok("voting auto-resolved without any votes", cs[0].state.status==="results");
   cs.forEach(c=>c.close()); await wait(300);
 
   // ---- HOST LEAVES IN LOBBY ----

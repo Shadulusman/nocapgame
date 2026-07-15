@@ -41,15 +41,17 @@ Open `/` for pass-and-play, `/online.html` for multiplayer.
 ## Test it
 
 ```bash
-node tests/e2e.js        # server: happy path, 17 checks
-node tests/edge.js       # server: ties, disconnects, host migration, 14 checks
+node tests/e2e.js        # server: happy path
+node tests/edge.js       # server: ties, disconnects, host migration, reconnect races, vote timeout
 python3 tests/uitest.py  # 3 real browsers play a full game (needs playwright)
-python3 tests/livetest.py # single-deploy: static serving + auto-detect + full game
+python3 tests/livetest.py # single-deploy: static serving + auto-detect + room browser + full game
 ```
 
 Playwright setup: `pip install playwright && python3 -m playwright install chromium`
 
-All four suites passed at last commit. **Run them after any change to `server.js`.**
+Don't hardcode check counts in comments/docs here — they drift every time a test
+is added. All four suites passed at last commit. **Run them after any change to
+`server.js`.**
 
 ---
 
@@ -75,9 +77,13 @@ only on the server. This is the entire reason the game is server-authoritative
 instead of peer-to-peer — a client-side split would let anyone win by opening
 dev tools.
 
-`tests/uitest.py` asserts the word string appears nowhere in the imposter's page
-HTML. **Do not break this test. Do not "optimize" by sending the word and hiding
-it in CSS.**
+`tests/uitest.py` captures every raw websocket frame the imposter's browser
+receives and asserts the word string appears in none of them. It checks network
+payloads rather than `page.content()` — the full HTML/JS source contains static
+code comments and UI copy that can coincidentally match a random secret word
+and false-positive (this happened: a category word "Header" once matched a CSS
+section comment). **Do not break this test. Do not "optimize" by sending
+the word and hiding it in CSS.**
 
 ### State machine
 
@@ -113,6 +119,21 @@ Server → client:
 At <12 players per room this is cheap and eliminates a whole class of desync bugs.
 Don't switch to diffs without a reason.
 
+### HTTP endpoints (besides static files)
+
+- `GET /health` → `200 "ok"`
+- `GET /rooms` → JSON array of open (lobby-status, not full) rooms:
+  `[{code, hostName, players, maxPlayers}, ...]`, capped at 30, fullest first.
+  Powers the public room browser on the entry screen ("Open rooms" under Join)
+  so anyone can tap to join without needing a code shared out of band — private
+  code-join still works exactly as before. Room codes are already meant to be
+  shareable so this isn't sensitive data; response has `Access-Control-Allow-Origin: *`
+  and `Cache-Control: no-store`. **The `no-store` + the explicit bypass in
+  `sw.js`'s fetch handler both matter** — this is live data, and the service
+  worker's cache-first strategy (meant for static assets) would otherwise freeze
+  the list at whatever it was on the very first fetch, forever, for that browser.
+  If you add another dynamic endpoint, remember to exclude it in `sw.js` too.
+
 ### Server-side guards (all tested — keep them)
 
 - Non-host cannot change settings or start
@@ -146,13 +167,27 @@ turn order for `rounds` (1–3) passes. The client renders the full turn order a
 a strip of avatars (`turnOrderHtml` in `online.html`) so it's visible who has
 gone, whose turn it is, and who's next — this used to be implicit and confusing
 when a turn let you submit several words in one burst; it's one word per turn now.
-After the last pass, all vote. Group wins by voting out an imposter. **A tie
-means nobody is voted out and the imposter wins** (`tallyAndFinish`).
+The clue feed (`feedGridHtml`) groups by *person* — one row per player, their
+words laid out alongside each other in round order — rather than one row per
+clue stacked chronologically, so you can actually scan "what did X say" instead
+of hunting through an interleaved list.
 
-Turn order is **reshuffled every round** (`order` in `startRound`). This matters:
-clues are in a persistent visible feed, so going last means reading everyone
-else's clues first. Randomizing spreads that advantage instead of parking it on
-one seat. Don't make turn order stable.
+After the last pass, voting starts and **auto-resolves after `VOTE_SECONDS`
+(30s, overridable via env var for tests)** even if not everyone has voted —
+`scheduleVoteTimeout` in `server.js`. The timer lives on the round object, not
+the room, so a stale timeout from an earlier round can't tally the wrong round
+after `again` starts a fresh one (checks `room.round === r` before acting).
+Group wins by voting out an imposter. **A tie means nobody is voted out and the
+imposter wins** (`tallyAndFinish`, which also clears the vote timer — every
+path that resolves voting goes through it, so the timer never double-fires).
+
+Turn order is **reshuffled every round** (`order` in `startRound`, via the
+Fisher-Yates `shuffle()` helper — not `sort(() => Math.random() - .5)`, which
+looked like a shuffle but was heavily biased toward keeping early elements in
+place and made the host disproportionately likely to land as imposter). This
+matters: clues are in a persistent visible feed, so going last means reading
+everyone else's clues first. Randomizing spreads that advantage instead of
+parking it on one seat. Don't make turn order stable.
 
 ---
 

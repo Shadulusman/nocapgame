@@ -45,6 +45,7 @@ function shuffle(arr) {
   }
   return a;
 }
+const MAX_PLAYERS = 12;
 const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 const newCode = () => Array.from({length:4}, () => rand([...CODE_CHARS])).join("");
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -108,6 +109,7 @@ function sanitize(room, pid) {
       votesIn: r.votes.size,
       totalVoters: players.filter(p => p.connected).length,
       yourVote: r.votes.get(pid) || null,
+      voteDeadline: r.voteDeadline || null,
     };
   }
   if (room.status === "results") {
@@ -164,6 +166,24 @@ function skipDisconnectedTurns(room) {
   }
 }
 
+const VOTE_SECONDS = Number(process.env.VOTE_SECONDS) || 30; // override in tests only
+
+// Voting auto-resolves after VOTE_SECONDS even if not everyone has voted, so a
+// slow or absent voter can't stall the group forever. The timer lives on the
+// round object (not the room) so a stale timeout from an earlier round — e.g.
+// after "again" starts a fresh round with its own new round object and timer —
+// checks `room.round === r` and no-ops instead of tallying the wrong round.
+function scheduleVoteTimeout(room) {
+  const r = room.round;
+  r.voteDeadline = now() + VOTE_SECONDS * 1000;
+  r.voteTimer = setTimeout(() => {
+    if (room.round === r && room.status === "voting") {
+      tallyAndFinish(room);
+      broadcast(room);
+    }
+  }, VOTE_SECONDS * 1000);
+}
+
 function advanceTurn(room, silent) {
   const r = room.round;
   r.turnIndex++;
@@ -172,6 +192,7 @@ function advanceTurn(room, silent) {
     r.roundNo++;
     if (r.roundNo >= room.settings.rounds) {
       room.status = "voting";
+      scheduleVoteTimeout(room);
       return;
     }
   }
@@ -180,6 +201,7 @@ function advanceTurn(room, silent) {
 
 function tallyAndFinish(room) {
   const r = room.round;
+  if (r.voteTimer) { clearTimeout(r.voteTimer); r.voteTimer = null; }
   const counts = new Map();
   for (const target of r.votes.values()) counts.set(target, (counts.get(target) || 0) + 1);
   let votedOutId = null, max = 0, tie = false;
@@ -227,6 +249,24 @@ const httpServer = http.createServer((req, res) => {
   let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
   if (urlPath === "/" ) urlPath = "/index.html";
   if (urlPath === "/health") { res.writeHead(200); return res.end("ok"); }
+  // Public room browser: list open (lobby-status) rooms so anyone can join without
+  // needing a code. Room codes are already meant to be shareable, so this data
+  // isn't sensitive — CORS is open to keep working from a standalone-opened file.
+  if (urlPath === "/rooms") {
+    const open = [...rooms.values()]
+      .filter(r => r.status === "lobby")
+      .map(r => ({
+        code: r.code,
+        hostName: (r.players.get(r.hostId) || {}).name || "?",
+        players: [...r.players.values()].filter(p => p.connected).length,
+        maxPlayers: MAX_PLAYERS,
+      }))
+      .filter(r => r.players > 0 && r.players < r.maxPlayers)
+      .sort((a, b) => b.players - a.players)
+      .slice(0, 30);
+    res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
+    return res.end(JSON.stringify(open));
+  }
   // block path traversal
   const filePath = path.join(ROOT, path.normalize(urlPath).replace(/^(\.\.[\/\\])+/, ""));
   if (!filePath.startsWith(ROOT)) { res.writeHead(403); return res.end("forbidden"); }
@@ -268,7 +308,7 @@ wss.on("connection", (ws) => {
       const room = rooms.get(code);
       if (!room) return sendErr(ws, "No room with that code.");
       if (room.status !== "lobby") return sendErr(ws, "That game already started.");
-      if (room.players.size >= 12) return sendErr(ws, "Room is full (12 max).");
+      if (room.players.size >= MAX_PLAYERS) return sendErr(ws, `Room is full (${MAX_PLAYERS} max).`);
       pid = uid();
       room.players.set(pid, { id: pid, name, ws, connected: true });
       roomCode = code;
