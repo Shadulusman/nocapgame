@@ -245,30 +245,42 @@ they do NOT merge them. The selected card is styled `.mode-card.sel`.
 
 ## Design system
 
-Clean **light theme** (converted from an earlier dark plum-ink theme at the
-owner's request, inspired by imposter.app — bright, airy, lots of whitespace).
+**Neon-blue "arcade" theme** on a dark canvas (this replaced a short-lived light
+theme; the owner wanted a distinct game vibe, not the generic look). Electric
+cyan + glow everywhere, faint background grid, glowing display type.
 
-- Background: soft off-white `#F5F4F9` with faint warm/crimson/violet radial
-  tints. White cards (`--surface`) float above it with soft shadows.
-- Two-role color language kept: **gold** `#F5B547` = civilian (diya-warm,
-  festive); **crimson** `#E5484D` = imposter. On the light background, gold as a
-  *fill* keeps dark text (`#241706`); gold as *text* uses the deeper `--gold-ink`
-  `#A96F12` for contrast — don't put `--gold` or `--gold-hi` as text on white,
-  it's unreadable.
-- **Token note:** `--cream` is the primary-text token and is now **dark**
-  (`#231D33`) — it kept its old name so the many `color:var(--cream)` usages
-  didn't all need renaming. `--ink`/`--ink-2` are light surfaces now, not dark.
-  If you flip the theme again, remap the `:root` block in **both** `index.html`
-  and `online.html` (their CSS is duplicated — see the CSS-inlining note above)
-  plus the `<meta name="theme-color">` and `manifest.json` colors.
-- Type: Bricolage Grotesque (display) / Onest (body) / Space Mono (codes, timers)
-- Signature element: the flip card. Civ face = warm cream-gold gradient with a
-  deep-gold word; imp face = rose-tinted white with a crimson "IMPOSTER". That's
-  where the color lives; everything else stays quiet.
-- Toasts stay dark (`#2A2340`) for contrast against the light UI.
-- Mobile-first, safe-area aware, `prefers-reduced-motion` respected
-- `livetest.py` asserts `body` computes to `rgb(245, 244, 249)` — update it if
-  the background token changes.
+- Background: near-black navy `#070A16` (`--ink`) with cyan/pink/violet radial
+  glows and a faint 46px cyan grid. Cards (`--surface` `#111834`) are dark with
+  neon borders/shadows.
+- Two-role color language: **electric cyan** `#35D6FF` = civilian; **neon pink-red**
+  `#FF3D6E` (`--crimson`) = imposter. Accent as a *fill* uses dark text
+  (`#04121F`); accent as *text on dark* uses the BRIGHT `--gold-ink` `#7FE4FF`
+  (not `--gold-deep`, which is the darker gradient/border cyan). Glow is done with
+  `text-shadow`/`box-shadow`/`filter:drop-shadow` in cyan or pink rgba.
+- **Token names are inherited, not accurate:** `--gold*` are cyan now, `--crimson*`
+  are neon pink-red, `--cream` (`#E9EEFF`) is the near-white primary text, and
+  `--ink*`/`--surface*` are dark. They kept the old names so the hundreds of
+  `var(--…)` usages across the two duplicated files didn't need renaming. To
+  re-theme, remap the `:root` block in **both** `index.html` and `online.html`,
+  the `<meta name="theme-color">`, and `manifest.json` — plus the handful of
+  hardcoded literals (`fill="#35D6FF"` logo, flip-card gradients, avatar `AV`
+  palette, `#04121F` accent-text). The bulk tints are `rgba(53,214,255,…)` (cyan),
+  `rgba(255,61,110,…)` (pink), `rgba(43,227,138,…)` (green).
+- ⚠️ **Comment trap:** never write `*/` inside a CSS comment (e.g. describing
+  `var(--gold-*/-something)`). It closes the comment early and silently corrupts
+  the next declarations — this exact bug made `--ink` resolve to empty and the
+  whole background render white. Bit us once; the "neon accents" block and `:root`
+  comment are written to avoid it.
+- Type: **Orbitron** (display/headings/buttons — the game look) / **Rajdhani**
+  (body/UI, runs light so body is `font-weight:500`) / **Share Tech Mono** (codes,
+  timers, labels).
+- Signature element: the flip card. Civ face = dark with a cyan-glowing word +
+  cyan border glow; imp face = dark with a pink-glowing "IMPOSTER". That's where
+  the boldest glow lives.
+- Toasts are a dark surface with a cyan glow border.
+- Mobile-first, safe-area aware, `prefers-reduced-motion` respected.
+- `livetest.py` asserts `body` computes to `rgb(7, 10, 22)` — update it if the
+  background token changes.
 
 ---
 
