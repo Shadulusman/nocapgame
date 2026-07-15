@@ -122,8 +122,9 @@ peek at the answer by opening their browser's dev tools.
 
 ## How the game plays
 
-1. Host makes a room, shares the 4-letter code — or a friend just picks it from
-   the "Open rooms" list on the Join screen, no code needed.
+1. Pick a mode: **Pass the phone** (one screen) or **Play online** (each on their
+   own phone). Online: host makes a room and shares the 4-letter code — or a
+   friend taps it from the **Public Rooms** list, no code needed.
 2. Everyone taps their card. Civilians see the secret word; the bhedi doesn't.
 3. Players take turns typing one clue word each. Everyone sees them appear live,
    grouped by person so it's easy to follow who said what.
@@ -131,11 +132,14 @@ peek at the answer by opening their browser's dev tools.
    30 seconds even if someone's still deciding.
 5. Group wins by voting out the bhedi. **A tie means nobody goes out - the bhedi survives.**
 
-Everyone types one clue word per turn — the turn order visibly cycles through
-the group. Host settings: clue rounds (1-3, how many times the turn order goes
-around), imposters (1-2, needs 5+ players for two), whether the imposter sees
-the category, whether they get decoy word hints, and which of the 15 category
-packs are in play.
+A public room with 3+ players **auto-starts after a 60-second countdown** (the
+host can start early). Players can **chat** in the lobby and during the game —
+the host can switch chat off. Host settings: clue rounds (1-3, how many times the
+turn order goes around), imposters (1-2, needs 5+ players for two), whether the
+imposter sees the category, whether they get decoy word hints, in-game chat
+on/off, and which of the 10 category packs are in play (Easy Words, Trending,
+Around the World, Entertainment, Everyday Things, Animals & Nature, Sports &
+Leisure, School, Celebrations, Celebrities).
 
 ---
 

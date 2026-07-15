@@ -13,21 +13,16 @@ const HOST = process.env.HOST || "0.0.0.0";
 
 /* ---- word data (server owns the secret; clients never see it early) ---- */
 const CATEGORIES = [
-  {id:"bolly",emo:"🎬",name:"Bollywood",words:["Sholay","DDLJ","3 Idiots","Dangal","Baahubali","PK","Lagaan","Gully Boy","RRR","Pathaan","Jawan","Zindagi Na Milegi Dobara","Queen","Kahaani","Drishyam","Munna Bhai MBBS","Chak De India","Hera Pheri","Dil Chahta Hai","Swades","Rang De Basanti","Taare Zameen Par","Om Shanti Om","Bajrangi Bhaijaan","Kuch Kuch Hota Hai","KGF","Andaz Apna Apna","Golmaal","Barfi","Kabhi Khushi Kabhie Gham"]},
-  {id:"food",emo:"🍛",name:"Indian Food",words:["Biryani","Butter Chicken","Masala Dosa","Idli","Samosa","Pani Puri","Chole Bhature","Paneer Tikka","Rajma Chawal","Dal Makhani","Pav Bhaji","Gulab Jamun","Jalebi","Rasgulla","Butter Naan","Aloo Paratha","Momos","Dhokla","Vada Pav","Misal Pav","Fish Curry","Appam","Puttu","Sambar","Rasam","Upma","Poha","Chai","Lassi","Kheer"]},
-  {id:"festival",emo:"🎉",name:"Festivals",words:["Diwali","Holi","Eid","Onam","Pongal","Navratri","Durga Puja","Ganesh Chaturthi","Raksha Bandhan","Karva Chauth","Baisakhi","Christmas","Janmashtami","Makar Sankranti","Dussehra","Vishu","Ugadi","Bihu","Lohri","Chhath Puja"]},
-  {id:"kerala",emo:"🌴",name:"Kerala Life",words:["Kathakali","Backwaters","Theyyam","Onam Sadya","Kasavu Saree","Snake Boat","Munnar","Toddy Shop","Banana Chips","Kerala Parotta","Beef Fry","Houseboat","Rubber Plantation","Ayurveda","Elephant Procession","Puttu & Kadala","Fish Molee","Nadan Chicken","Vembanad Lake","Coconut Tree"]},
-  {id:"cricket",emo:"🏏",name:"Cricket",words:["Sachin Tendulkar","Virat Kohli","MS Dhoni","IPL","World Cup","Yorker","LBW","Wankhede","Eden Gardens","Rohit Sharma","Test Match","Googly","Century","Wicket","Bouncer","Chennai Super Kings","Mumbai Indians","Sixer","Umpire","Powerplay"]},
-  {id:"fifa",emo:"⚽",name:"Football",words:["Messi","Ronaldo","Neymar","Mbappé","World Cup","Barcelona","Real Madrid","Penalty","Offside","Hat-trick","Goalkeeper","Free Kick","Champions League","Manchester United","Liverpool","Header","Corner Kick","Red Card","Golden Boot","Dribble"]},
-  {id:"places",emo:"📍",name:"Places",words:["Taj Mahal","Gateway of India","Red Fort","Qutub Minar","Hawa Mahal","Golden Temple","India Gate","Charminar","Mysore Palace","Goa Beach","Kashmir Valley","Rajasthan Desert","Himalayas","Marina Beach","Marine Drive","Varanasi Ghats","Amber Fort","Hampi","Rann of Kutch","Andaman Islands"]},
-  {id:"chars",emo:"🎯",name:"Characters",words:["Chhota Bheem","Doraemon","Shinchan","Motu Patlu","Hanuman","Ravana","Chulbul Pandey","Circuit","Gabbar Singh","Rancho","Simmba","Bajrangi","Kabir Singh","Jethalal","Babita","Daya","Little Krishna","Nagraj","Shaktimaan","Mr. India"]},
-  {id:"gulf",emo:"✈️",name:"Gulf / NRI",words:["Dubai","Abu Dhabi","Visa Stamping","Passport","Remittance","Dirham","Riyal","Labour Camp","Emirates Flight","Gold Souk","Metro Card","Shawarma","Kabsa","Video Call Home","Excess Baggage","Duty Free","Iqama","Sponsor","Annual Vacation","Lulu Hypermarket"]},
-  {id:"college",emo:"🎒",name:"College / School",words:["Attendance","Proxy","Canteen","Assignment","Backbench","Mass Bunk","Viva","Ragging","Internship","Hostel","Mess Food","Xerox Shop","Lab Record","Sports Day","Farewell","Placement","Fresher's Party","Semester Exam","Group Project","Fest"]},
-  {id:"vehicles",emo:"🚌",name:"Vehicles",words:["Auto Rickshaw","Royal Enfield","Scooty","City Bus","Metro","Local Train","Cycle","Tractor","Ambassador","Maruti 800","Tempo","Bullock Cart","E-Rickshaw","Activa","Tata Nano","Ferry Boat","Sleeper Bus","Cycle Rickshaw","Jeep","Lorry"]},
-  {id:"house",emo:"🏠",name:"Household",words:["Pressure Cooker","Mixer Grinder","Ceiling Fan","Steel Almirah","Bucket & Mug","Tulsi Plant","Inverter","Water Filter","Jhadu","Mosquito Net","Gas Stove","Tiffin Box","Air Cooler","Diya","Steel Glass","Casserole","Clothesline","Doormat","Pooja Shelf","Cot"]},
-  {id:"people",emo:"👥",name:"People",words:["Doctor","Teacher","Auto Driver","Chaiwala","Watchman","Vegetable Vendor","Milkman","Priest","Barber","Tailor","Electrician","Plumber","Postman","Farmer","Shopkeeper","Traffic Police","Rickshaw Puller","News Anchor","Politician","Neighbour Aunty"]},
-  {id:"funny",emo:"😂",name:"Desi Funny",words:["Sharma Ji Ka Beta","WhatsApp Forward","Log Kya Kahenge","Beta Engineer Banega","Rishtedaar","Shaadi Ka Card","Chai Break","Power Cut","Mummy Ka Chappal","Adjust Kar Lo","Bhai Discount De Do","Free WiFi","Ghar Ka Khana","Padhai Kar Le","Uncle Aunty","Traffic Jam","Kal Se Gym","Guest Aa Gaye","Netaji Ka Bhashan","Monday Morning"]},
-  {id:"bakery",emo:"🥐",name:"Bakery",words:["Cream Bun","Egg Puff","Rusk","Dilkush","Bun Maska","Pastry","Fruit Cake","Cookie","Patties","Brownie","Croissant","Donut","Muffin","Cupcake","Toast","Samosa","Vanilla Slice","Black Forest","Coconut Biscuit","Jam Roll"]},
+  {id:"easy",emo:"🍎",name:"Easy Words",words:["Apple","Pizza","Dog","Cat","Car","Phone","Chair","Table","Book","School","Teacher","Doctor","House","Tree","Sun","Moon","Beach","Mountain","Cake","Ice Cream","Coffee","Bus","Train","Football","Camera","Clock","Window","Mirror","Umbrella","Backpack"]},
+  {id:"trending",emo:"🔥",name:"Trending",words:["ChatGPT","TikTok","Instagram","Reels","Podcast","AI","Influencer","Crypto","Bitcoin","Meme","Viral","Netflix","Spotify","iPhone","Tesla","Drone","VR","Electric Car","Selfie","Hashtag","Livestream","YouTube Shorts","Creator","Emoji","Threads","Discord","Snapchat","Esports","Metaverse"]},
+  {id:"world",emo:"🌍",name:"Around the World",words:["India","Japan","Brazil","France","Canada","Australia","Dubai","New York","Paris","London","Taj Mahal","Eiffel Tower","Great Wall","Mount Everest","Sahara","Amazon Rainforest","Antarctica","Niagara Falls","Bali","Maldives","Rome","Tokyo","Sydney","Singapore","Iceland","Venice","Swiss Alps","Pyramids","Statue of Liberty","Burj Khalifa"]},
+  {id:"ent",emo:"🎬",name:"Entertainment",words:["Avengers","Batman","Superman","Harry Potter","Spider-Man","Iron Man","Shrek","Frozen","Minions","Lion King","Friends","Breaking Bad","Money Heist","Stranger Things","Squid Game","Interstellar","Titanic","Avatar","John Wick","Mission Impossible","Naruto","One Piece","Pokemon","Minecraft","GTA","BGMI","Free Fire","Valorant","Mario","SpongeBob"]},
+  {id:"everyday",emo:"🧴",name:"Everyday Things",words:["Toothbrush","Pillow","Soap","Shampoo","Remote","TV","Laptop","Keyboard","Mouse","Wallet","Keys","Bottle","Spoon","Fork","Knife","Plate","Pan","Microwave","Fridge","Fan","AC","Light Bulb","Curtain","Bucket","Mug","Scissors","Pen","Notebook","Helmet","Watch"]},
+  {id:"animals",emo:"🦁",name:"Animals & Nature",words:["Lion","Tiger","Elephant","Giraffe","Penguin","Kangaroo","Koala","Panda","Wolf","Fox","Bear","Monkey","Horse","Cow","Goat","Rabbit","Snake","Crocodile","Shark","Dolphin","Whale","Octopus","Peacock","Eagle","Parrot","Rose","Sunflower","Coconut Tree","Bamboo","Volcano"]},
+  {id:"sports",emo:"⚽",name:"Sports & Leisure",words:["Cricket","Football","Tennis","Basketball","Volleyball","Badminton","Chess","Swimming","Golf","Hockey","Messi","Ronaldo","Virat Kohli","MS Dhoni","Sachin Tendulkar","Neeraj Chopra","Olympics","World Cup","IPL","Wimbledon","Penalty","Goalkeeper","Bat","Helmet","Referee","Gym","Yoga","Cycling","Running","Skateboard"]},
+  {id:"school",emo:"🎒",name:"School",words:["Principal","Teacher","Student","Homework","Exam","Blackboard","Chalk","Pencil","Notebook","Lunch Box","Uniform","Library","Science Lab","Math","History","Geography","Biology","Chemistry","Physics","Calculator","Project","Report Card","Classroom","Desk","Backpack","Compass","Glue","Marker","Whiteboard","Graduation"]},
+  {id:"celebration",emo:"🎉",name:"Celebrations",words:["Birthday","Wedding","Diwali","Eid","Christmas","New Year","Halloween","Holi","Onam","Vishu","Thanksgiving","Anniversary","Baby Shower","Fireworks","Gift","Cake","Party","Balloon","Confetti","Music","Dance","DJ","Festival","Carnival","Lantern","Decoration","Family Dinner","Vacation","Parade","Picnic"]},
+  {id:"celebs",emo:"⭐",name:"Celebrities",words:["Shah Rukh Khan","Salman Khan","Aamir Khan","Deepika Padukone","Alia Bhatt","Ranbir Kapoor","Rajinikanth","Allu Arjun","Mohanlal","Mammootty","Prabhas","Yash","Virat Kohli","MS Dhoni","Sachin Tendulkar","Cristiano Ronaldo","Lionel Messi","Taylor Swift","Ed Sheeran","Justin Bieber","Dwayne Johnson","Tom Cruise","Emma Watson","Robert Downey Jr.","Chris Hemsworth","Zendaya","MrBeast","PewDiePie","Elon Musk","Mark Zuckerberg"]},
 ];
 const CAT_INDEX = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
 const PUBLIC_CATS = CATEGORIES.map(c => ({ id:c.id, emo:c.emo, name:c.name, count:c.words.length }));
@@ -65,9 +60,13 @@ function makeRoom(hostId) {
       rounds: 2,
       seeCat: true,
       hint: true,
+      chat: true,
     },
     players: new Map(), // id -> {id,name,ws,connected,alive}
     round: null,
+    chat: [],            // {id,name,text,ts} — last CHAT_KEEP kept
+    autoStartAt: null,   // ms timestamp the lobby auto-start fires, or null
+    autoStartTimer: null,
   };
 }
 
@@ -85,6 +84,10 @@ function sanitize(room, pid) {
     settings: room.settings,
     catalog: PUBLIC_CATS,
     players,
+    // In-game chat (host can disable). Kept small; broadcast with each snapshot.
+    chat: room.settings.chat ? room.chat.slice(-CHAT_KEEP).map(c => ({ id: c.id, name: c.name, text: c.text })) : [],
+    // Lobby auto-start countdown deadline (ms) so clients can render "Starts in 0:58".
+    autoStartAt: room.status === "lobby" ? room.autoStartAt : null,
   };
   if (room.status === "playing" || room.status === "voting") {
     const r = room.round;
@@ -130,6 +133,7 @@ function broadcast(room) {
 function sendErr(ws, msg) { try { ws.send(JSON.stringify({ type: "error", message: msg })); } catch (e) {} }
 
 function startRound(room) {
+  cancelAutoStart(room); // game is starting — no dangling lobby countdown
   const pool = CATEGORIES.filter(c => room.settings.categories.includes(c.id));
   const cat = rand(pool.length ? pool : CATEGORIES);
   const word = rand(cat.words);
@@ -167,6 +171,37 @@ function skipDisconnectedTurns(room) {
 }
 
 const VOTE_SECONDS = Number(process.env.VOTE_SECONDS) || 30; // override in tests only
+const LOBBY_SECONDS = Number(process.env.LOBBY_SECONDS) || 60; // public-room auto-start
+const CHAT_KEEP = 50;         // most recent chat messages retained per room
+const CHAT_MAX_LEN = 160;
+const CHAT_MIN_GAP = 350;     // ms between a player's messages (light rate limit)
+
+const connectedCount = room => [...room.players.values()].filter(p => p.connected).length;
+
+// A lobby with 3+ connected players auto-starts after LOBBY_SECONDS (the "Starts
+// in 0:58" countdown on public room cards). The host can start early; if players
+// drop below 3 the countdown cancels. Timer + deadline live on the room and are
+// always cleared through cancelAutoStart so a stale one can't fire into a game.
+function cancelAutoStart(room) {
+  if (room.autoStartTimer) { clearTimeout(room.autoStartTimer); room.autoStartTimer = null; }
+  room.autoStartAt = null;
+}
+function refreshAutoStart(room) {
+  if (room.status !== "lobby") { cancelAutoStart(room); return; }
+  const enough = connectedCount(room) >= 3;
+  if (enough && !room.autoStartTimer) {
+    room.autoStartAt = now() + LOBBY_SECONDS * 1000;
+    room.autoStartTimer = setTimeout(() => {
+      room.autoStartTimer = null; room.autoStartAt = null;
+      if (room.status === "lobby" && connectedCount(room) >= 3) {
+        startRound(room);
+        broadcast(room);
+      }
+    }, LOBBY_SECONDS * 1000);
+  } else if (!enough && room.autoStartTimer) {
+    cancelAutoStart(room);
+  }
+}
 
 // Voting auto-resolves after VOTE_SECONDS even if not everyone has voted, so a
 // slow or absent voter can't stall the group forever. The timer lives on the
@@ -255,12 +290,18 @@ const httpServer = http.createServer((req, res) => {
   if (urlPath === "/rooms") {
     const open = [...rooms.values()]
       .filter(r => r.status === "lobby")
-      .map(r => ({
-        code: r.code,
-        hostName: (r.players.get(r.hostId) || {}).name || "?",
-        players: [...r.players.values()].filter(p => p.connected).length,
-        maxPlayers: MAX_PLAYERS,
-      }))
+      .map(r => {
+        const conn = [...r.players.values()].filter(p => p.connected);
+        return {
+          code: r.code,
+          hostName: (r.players.get(r.hostId) || {}).name || "?",
+          players: conn.length,
+          maxPlayers: MAX_PLAYERS,
+          imposters: r.settings.imposters,
+          names: conn.slice(0, 6).map(p => p.name),      // for the avatar row
+          autoStartAt: r.autoStartAt || null,             // ms, drives "Starts in 0:58"
+        };
+      })
       .filter(r => r.players > 0 && r.players < r.maxPlayers)
       .sort((a, b) => b.players - a.players)
       .slice(0, 30);
@@ -313,6 +354,7 @@ wss.on("connection", (ws) => {
       room.players.set(pid, { id: pid, name, ws, connected: true });
       roomCode = code;
       ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
+      refreshAutoStart(room);
       broadcast(room);
       return;
     }
@@ -325,6 +367,7 @@ wss.on("connection", (ws) => {
       const p = room.players.get(pid);
       p.ws = ws; p.connected = true;
       ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
+      refreshAutoStart(room);
       broadcast(room);
       return;
     }
@@ -340,6 +383,23 @@ wss.on("connection", (ws) => {
       if (Number.isInteger(m.rounds)) s.rounds = Math.max(1, Math.min(3, m.rounds));
       if (typeof m.seeCat === "boolean") s.seeCat = m.seeCat;
       if (typeof m.hint === "boolean") s.hint = m.hint;
+      if (typeof m.chat === "boolean") s.chat = m.chat;
+      broadcast(room);
+      return;
+    }
+
+    if (t === "chat") {
+      if (!room.settings.chat) return;                     // host disabled chat
+      if (room.status !== "lobby" && room.status !== "playing" && room.status !== "voting") return;
+      const p = room.players.get(pid);
+      if (!p) return;
+      const nowMs = now();
+      if (p.lastChat && nowMs - p.lastChat < CHAT_MIN_GAP) return; // light rate limit
+      const text = String(msg.text || "").replace(/\s+/g, " ").trim().slice(0, CHAT_MAX_LEN);
+      if (!text) return;
+      p.lastChat = nowMs;
+      room.chat.push({ id: uid(), name: p.name, text, ts: nowMs });
+      if (room.chat.length > CHAT_KEEP) room.chat = room.chat.slice(-CHAT_KEEP);
       broadcast(room);
       return;
     }
@@ -380,7 +440,7 @@ wss.on("connection", (ws) => {
     }
 
     if (t === "again" && room.hostId === pid && room.status === "results") {
-      if (room.players.size < 3) { room.status = "lobby"; broadcast(room); return; }
+      if (room.players.size < 3) { room.status = "lobby"; refreshAutoStart(room); broadcast(room); return; }
       startRound(room);
       broadcast(room);
       return;
@@ -388,6 +448,7 @@ wss.on("connection", (ws) => {
 
     if (t === "backToLobby" && room.hostId === pid) {
       room.status = "lobby"; room.round = null;
+      refreshAutoStart(room);
       broadcast(room);
       return;
     }
@@ -414,6 +475,8 @@ wss.on("connection", (ws) => {
       return;
     }
     reassignHostIfNeeded(room);
+    // dropping below 3 in the lobby cancels the auto-start countdown
+    refreshAutoStart(room);
     // if it was this player's turn, skip on
     if (room.status === "playing" && room.round.order[room.round.turnIndex] === pid) {
       skipDisconnectedTurns(room);

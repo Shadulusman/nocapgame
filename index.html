@@ -246,6 +246,23 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .mode-btn:active{transform:scale(.97);}
 .mode-btn.on{border-color:rgba(245,181,71,.55);background:linear-gradient(180deg,rgba(245,181,71,.10),rgba(245,181,71,.03));}
 
+/* mode selector cards (Pass the phone / Play online) */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:4px;}
+.mode-card{position:relative;text-align:left;border:2px solid var(--line);background:var(--surface);border-radius:var(--r-lg);
+  padding:15px 15px 14px;cursor:pointer;transition:.16s;color:var(--cream);font-family:var(--ff-body);display:block;text-decoration:none;}
+.mode-card:active{transform:scale(.98);}
+.mode-card .ic{color:var(--muted);}
+.mode-card .ic svg{width:28px;height:28px;}
+.mode-card .mt{font-family:var(--ff-disp);font-weight:700;font-size:16px;margin-top:22px;}
+.mode-card .md{font-size:12px;color:var(--muted);line-height:1.32;margin-top:3px;}
+.mode-card .rc{position:absolute;top:14px;right:14px;width:24px;height:24px;border-radius:50%;border:2px solid var(--line);
+  display:grid;place-items:center;color:transparent;transition:.16s;}
+.mode-card .rc svg{width:13px;height:13px;}
+.mode-card.sel{border-color:var(--gold);background:linear-gradient(180deg,rgba(245,181,71,.09),transparent);}
+.mode-card.sel .ic{color:var(--cream);}
+.mode-card.sel .rc{background:var(--gold);border-color:var(--gold);color:#241706;}
+.mode-card.dim{opacity:.65;background:var(--ink-2);border-color:transparent;}
+
 /* join code */
 .code-hero{text-align:center;padding:22px 18px;background:linear-gradient(165deg,rgba(245,181,71,.10),rgba(245,181,71,.02));
   border:1px solid rgba(245,181,71,.3);border-radius:var(--r-lg);margin-bottom:14px;}
@@ -349,16 +366,25 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
       </button>
     </div>
 
-    <div class="hero">
-      <h1>One of you<br><span class="thin">is the</span> bhedi.</h1>
-      <p>Everyone gets the secret word — except the imposter. Describe it, spot the fake, don't get caught.</p>
-      <a href="online.html" class="mini-btn" style="margin-top:14px;text-decoration:none;border-color:rgba(245,181,71,.5);color:var(--gold-ink);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg>
-        Play online instead
-      </a>
-    </div>
+    <div class="scroll" style="margin-top:6px;">
+      <div class="section" style="margin-top:2px;">
+        <div class="modes">
+          <div class="mode-card sel">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg></div>
+            <div class="rc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+            <div class="mt">Pass the phone</div>
+            <div class="md">Everyone uses one screen</div>
+          </div>
+          <a class="mode-card dim" href="online.html">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r=".6"/></svg></div>
+            <div class="rc"></div>
+            <div class="mt">Play online</div>
+            <div class="md">Play together from anywhere</div>
+          </a>
+        </div>
+      </div>
+      <p style="text-align:center;color:var(--muted);font-size:14.5px;margin:16px 6px 4px;line-height:1.45;">Explain the rules, then pass the phone around. Each player secretly sees their role.</p>
 
-    <div class="scroll" style="margin-top:14px;">
       <!-- players -->
       <div class="section">
         <div class="sec-head"><h3>Players</h3><span class="hint" id="pCount">0 added</span></div>
@@ -520,21 +546,16 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
    BHEDI · data
    ========================================================= */
 const CATEGORIES = [
-  {id:"bolly", emo:"🎬", name:"Bollywood", words:["Sholay","DDLJ","3 Idiots","Dangal","Baahubali","PK","Lagaan","Gully Boy","RRR","Pathaan","Jawan","Zindagi Na Milegi Dobara","Queen","Kahaani","Drishyam","Munna Bhai MBBS","Chak De India","Hera Pheri","Dil Chahta Hai","Swades","Rang De Basanti","Taare Zameen Par","Om Shanti Om","Bajrangi Bhaijaan","Kuch Kuch Hota Hai","KGF","Andaz Apna Apna","Golmaal","Barfi","Kabhi Khushi Kabhie Gham"]},
-  {id:"food", emo:"🍛", name:"Indian Food", words:["Biryani","Butter Chicken","Masala Dosa","Idli","Samosa","Pani Puri","Chole Bhature","Paneer Tikka","Rajma Chawal","Dal Makhani","Pav Bhaji","Gulab Jamun","Jalebi","Rasgulla","Butter Naan","Aloo Paratha","Momos","Dhokla","Vada Pav","Misal Pav","Fish Curry","Appam","Puttu","Sambar","Rasam","Upma","Poha","Chai","Lassi","Kheer"]},
-  {id:"festival", emo:"🎉", name:"Festivals", words:["Diwali","Holi","Eid","Onam","Pongal","Navratri","Durga Puja","Ganesh Chaturthi","Raksha Bandhan","Karva Chauth","Baisakhi","Christmas","Janmashtami","Makar Sankranti","Dussehra","Vishu","Ugadi","Bihu","Lohri","Chhath Puja"]},
-  {id:"kerala", emo:"🌴", name:"Kerala Life", words:["Kathakali","Backwaters","Theyyam","Onam Sadya","Kasavu Saree","Snake Boat","Munnar","Toddy Shop","Banana Chips","Kerala Parotta","Beef Fry","Houseboat","Rubber Plantation","Ayurveda","Elephant Procession","Puttu & Kadala","Fish Molee","Nadan Chicken","Vembanad Lake","Coconut Tree"]},
-  {id:"cricket", emo:"🏏", name:"Cricket", words:["Sachin Tendulkar","Virat Kohli","MS Dhoni","IPL","World Cup","Yorker","LBW","Wankhede","Eden Gardens","Rohit Sharma","Test Match","Googly","Century","Wicket","Bouncer","Chennai Super Kings","Mumbai Indians","Sixer","Umpire","Powerplay"]},
-  {id:"fifa", emo:"⚽", name:"Football", words:["Messi","Ronaldo","Neymar","Mbappé","World Cup","Barcelona","Real Madrid","Penalty","Offside","Hat-trick","Goalkeeper","Free Kick","Champions League","Manchester United","Liverpool","Header","Corner Kick","Red Card","Golden Boot","Dribble"]},
-  {id:"places", emo:"📍", name:"Places", words:["Taj Mahal","Gateway of India","Red Fort","Qutub Minar","Hawa Mahal","Golden Temple","India Gate","Charminar","Mysore Palace","Goa Beach","Kashmir Valley","Rajasthan Desert","Himalayas","Marina Beach","Marine Drive","Varanasi Ghats","Amber Fort","Hampi","Rann of Kutch","Andaman Islands"]},
-  {id:"chars", emo:"🎯", name:"Characters", words:["Chhota Bheem","Doraemon","Shinchan","Motu Patlu","Hanuman","Ravana","Chulbul Pandey","Circuit","Gabbar Singh","Rancho","Simmba","Bajrangi","Kabir Singh","Jethalal","Babita","Daya","Little Krishna","Nagraj","Shaktimaan","Mr. India"]},
-  {id:"gulf", emo:"✈️", name:"Gulf / NRI", words:["Dubai","Abu Dhabi","Visa Stamping","Passport","Remittance","Dirham","Riyal","Labour Camp","Emirates Flight","Gold Souk","Metro Card","Shawarma","Kabsa","Video Call Home","Excess Baggage","Duty Free","Iqama","Sponsor","Annual Vacation","Lulu Hypermarket"]},
-  {id:"college", emo:"🎒", name:"College / School", words:["Attendance","Proxy","Canteen","Assignment","Backbench","Mass Bunk","Viva","Ragging","Internship","Hostel","Mess Food","Xerox Shop","Lab Record","Sports Day","Farewell","Placement","Fresher's Party","Semester Exam","Group Project","Fest"]},
-  {id:"vehicles", emo:"🚌", name:"Vehicles", words:["Auto Rickshaw","Royal Enfield","Scooty","City Bus","Metro","Local Train","Cycle","Tractor","Ambassador","Maruti 800","Tempo","Bullock Cart","E-Rickshaw","Activa","Tata Nano","Ferry Boat","Sleeper Bus","Cycle Rickshaw","Jeep","Lorry"]},
-  {id:"house", emo:"🏠", name:"Household", words:["Pressure Cooker","Mixer Grinder","Ceiling Fan","Steel Almirah","Bucket & Mug","Tulsi Plant","Inverter","Water Filter","Jhadu","Mosquito Net","Gas Stove","Tiffin Box","Air Cooler","Diya","Steel Glass","Casserole","Clothesline","Doormat","Pooja Shelf","Cot"]},
-  {id:"people", emo:"👥", name:"People", words:["Doctor","Teacher","Auto Driver","Chaiwala","Watchman","Vegetable Vendor","Milkman","Priest","Barber","Tailor","Electrician","Plumber","Postman","Farmer","Shopkeeper","Traffic Police","Rickshaw Puller","News Anchor","Politician","Neighbour Aunty"]},
-  {id:"funny", emo:"😂", name:"Desi Funny", words:["Sharma Ji Ka Beta","WhatsApp Forward","Log Kya Kahenge","Beta Engineer Banega","Rishtedaar","Shaadi Ka Card","Chai Break","Power Cut","Mummy Ka Chappal","Adjust Kar Lo","Bhai Discount De Do","Free WiFi","Ghar Ka Khana","Padhai Kar Le","Uncle Aunty","Traffic Jam","Kal Se Gym","Guest Aa Gaye","Netaji Ka Bhashan","Monday Morning"]},
-  {id:"bakery", emo:"🥐", name:"Bakery", words:["Cream Bun","Egg Puff","Rusk","Dilkush","Bun Maska","Pastry","Fruit Cake","Cookie","Patties","Brownie","Croissant","Donut","Muffin","Cupcake","Toast","Samosa","Vanilla Slice","Black Forest","Coconut Biscuit","Jam Roll"]},
+  {id:"easy", emo:"🍎", name:"Easy Words", words:["Apple","Pizza","Dog","Cat","Car","Phone","Chair","Table","Book","School","Teacher","Doctor","House","Tree","Sun","Moon","Beach","Mountain","Cake","Ice Cream","Coffee","Bus","Train","Football","Camera","Clock","Window","Mirror","Umbrella","Backpack"]},
+  {id:"trending", emo:"🔥", name:"Trending", words:["ChatGPT","TikTok","Instagram","Reels","Podcast","AI","Influencer","Crypto","Bitcoin","Meme","Viral","Netflix","Spotify","iPhone","Tesla","Drone","VR","Electric Car","Selfie","Hashtag","Livestream","YouTube Shorts","Creator","Emoji","Threads","Discord","Snapchat","Esports","Metaverse"]},
+  {id:"world", emo:"🌍", name:"Around the World", words:["India","Japan","Brazil","France","Canada","Australia","Dubai","New York","Paris","London","Taj Mahal","Eiffel Tower","Great Wall","Mount Everest","Sahara","Amazon Rainforest","Antarctica","Niagara Falls","Bali","Maldives","Rome","Tokyo","Sydney","Singapore","Iceland","Venice","Swiss Alps","Pyramids","Statue of Liberty","Burj Khalifa"]},
+  {id:"ent", emo:"🎬", name:"Entertainment", words:["Avengers","Batman","Superman","Harry Potter","Spider-Man","Iron Man","Shrek","Frozen","Minions","Lion King","Friends","Breaking Bad","Money Heist","Stranger Things","Squid Game","Interstellar","Titanic","Avatar","John Wick","Mission Impossible","Naruto","One Piece","Pokemon","Minecraft","GTA","BGMI","Free Fire","Valorant","Mario","SpongeBob"]},
+  {id:"everyday", emo:"🧴", name:"Everyday Things", words:["Toothbrush","Pillow","Soap","Shampoo","Remote","TV","Laptop","Keyboard","Mouse","Wallet","Keys","Bottle","Spoon","Fork","Knife","Plate","Pan","Microwave","Fridge","Fan","AC","Light Bulb","Curtain","Bucket","Mug","Scissors","Pen","Notebook","Helmet","Watch"]},
+  {id:"animals", emo:"🦁", name:"Animals & Nature", words:["Lion","Tiger","Elephant","Giraffe","Penguin","Kangaroo","Koala","Panda","Wolf","Fox","Bear","Monkey","Horse","Cow","Goat","Rabbit","Snake","Crocodile","Shark","Dolphin","Whale","Octopus","Peacock","Eagle","Parrot","Rose","Sunflower","Coconut Tree","Bamboo","Volcano"]},
+  {id:"sports", emo:"⚽", name:"Sports & Leisure", words:["Cricket","Football","Tennis","Basketball","Volleyball","Badminton","Chess","Swimming","Golf","Hockey","Messi","Ronaldo","Virat Kohli","MS Dhoni","Sachin Tendulkar","Neeraj Chopra","Olympics","World Cup","IPL","Wimbledon","Penalty","Goalkeeper","Bat","Helmet","Referee","Gym","Yoga","Cycling","Running","Skateboard"]},
+  {id:"school", emo:"🎒", name:"School", words:["Principal","Teacher","Student","Homework","Exam","Blackboard","Chalk","Pencil","Notebook","Lunch Box","Uniform","Library","Science Lab","Math","History","Geography","Biology","Chemistry","Physics","Calculator","Project","Report Card","Classroom","Desk","Backpack","Compass","Glue","Marker","Whiteboard","Graduation"]},
+  {id:"celebration", emo:"🎉", name:"Celebrations", words:["Birthday","Wedding","Diwali","Eid","Christmas","New Year","Halloween","Holi","Onam","Vishu","Thanksgiving","Anniversary","Baby Shower","Fireworks","Gift","Cake","Party","Balloon","Confetti","Music","Dance","DJ","Festival","Carnival","Lantern","Decoration","Family Dinner","Vacation","Parade","Picnic"]},
+  {id:"celebs", emo:"⭐", name:"Celebrities", words:["Shah Rukh Khan","Salman Khan","Aamir Khan","Deepika Padukone","Alia Bhatt","Ranbir Kapoor","Rajinikanth","Allu Arjun","Mohanlal","Mammootty","Prabhas","Yash","Virat Kohli","MS Dhoni","Sachin Tendulkar","Cristiano Ronaldo","Lionel Messi","Taylor Swift","Ed Sheeran","Justin Bieber","Dwayne Johnson","Tom Cruise","Emma Watson","Robert Downey Jr.","Chris Hemsworth","Zendaya","MrBeast","PewDiePie","Elon Musk","Mark Zuckerberg"]},
 ];
 
 const AV_COLORS = ["#F5B547","#F2A65A","#E88B6B","#D98C7A","#C99A6B","#E0B15C","#EFA24E","#F0B860","#DDA15E","#E9C46A","#F4A259","#E76F51"];

@@ -18,7 +18,7 @@ async function room(n, names){
   for(let i=1;i<n;i++){ const c=client(names[i]); await wait(120); c.sendj({type:"join",code:A.code,name:names[i]}); cs.push(c); }
   await wait(400); return cs;
 }
-setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
+setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},40000);
 (async()=>{
   await wait(400);
 
@@ -128,6 +128,33 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
   const impCount = cs.filter(x=>x.state.round.yourRole==="imposter").length;
   ok("2 imposters assigned", impCount===2);
   ok("both imposters get null word", cs.filter(x=>x.state.round.yourRole==="imposter").every(x=>x.state.round.yourWord===null));
+  cs.forEach(c=>c.close()); await wait(200);
+
+  // ---- LOBBY AUTO-START COUNTDOWN SCHEDULING (timer fires in autostart.js) ----
+  cs = await room(2,["A2","B2"]);
+  ok("no auto-start countdown under 3 players", cs[0].state.autoStartAt==null);
+  let c3 = client("C2"); await wait(120); c3.sendj({type:"join",code:cs[0].code,name:"C2"}); cs.push(c3);
+  await wait(300);
+  ok("auto-start countdown appears at 3 players", typeof cs[0].state.autoStartAt==="number");
+  c3.close(); await wait(400);
+  ok("auto-start countdown cancels back under 3", cs[0].state.autoStartAt==null);
+  cs.slice(0,2).forEach(c=>c.close()); await wait(200);
+
+  // ---- CHAT ----
+  cs = await room(3,["Ann","Bob","Cid"]);
+  cs[1].sendj({type:"chat", text:"hello there"}); await wait(200);
+  ok("chat message reaches everyone", cs[0].state.chat.some(m=>m.text==="hello there" && m.name==="Bob"));
+  cs[1].sendj({type:"chat", text:"   "}); await wait(150);
+  ok("empty chat ignored", cs[0].state.chat.filter(m=>m.name==="Bob").length===1);
+  const longText = "x".repeat(400);
+  cs[2].sendj({type:"chat", text:longText}); await wait(150);
+  ok("chat trimmed to 160 chars", cs[0].state.chat.find(m=>m.name==="Cid").text.length===160);
+  cs[0].sendj({type:"settings", settings:{chat:false}}); await wait(200);
+  ok("chat setting toggles off", cs[0].state.settings.chat===false);
+  ok("chat hidden from state when disabled", cs[0].state.chat.length===0);
+  cs[1].sendj({type:"chat", text:"should be blocked"}); await wait(200);
+  cs[0].sendj({type:"settings", settings:{chat:true}}); await wait(200);
+  ok("messages sent while disabled are dropped", !cs[0].state.chat.some(m=>m.text==="should be blocked"));
   cs.forEach(c=>c.close()); await wait(200);
 
   console.log("\n"+(fail.length?"FAILURES: "+fail.join("; "):"ALL EDGE CASES PASSED"));
