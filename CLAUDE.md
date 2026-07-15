@@ -12,13 +12,15 @@ Installable PWA + realtime multiplayer. Two modes share one design system.
 | Thing | State |
 |---|---|
 | Pass-and-play mode | Done, tested |
-| Online multiplayer | Done, tested (48 automated checks pass) |
-| Deploy | **NOT deployed yet.** Owner was mid-`git push`, not finished. |
+| Online multiplayer | Done, tested (see "Test it" — all 4 suites must pass) |
+| Deploy | Pushed to GitHub (`Shadulusman/bhedi`). Render deploy is a manual step the owner does via the dashboard. |
 | Scoring across rounds | Not built |
 | Profanity filter / rate limiting | Not built |
 
-**Immediate task the owner was stuck on:** pushing this repo to GitHub, then
-deploying to Render (Build: `npm install`, Start: `node server.js`, Free tier).
+**Repo is pushed to GitHub** (`Shadulusman/bhedi`, `main`). Render deploy
+(Build: `npm install`, Start: `node server.js`, Free tier) is a manual dashboard
+step the owner does themselves — walk them through the clicks, don't attempt it
+via CLI.
 
 The owner is a beginner with git/Node. Prefer concrete commands over explanation,
 and **never put `#` comments inside a paste block** — zsh executes them as
@@ -127,6 +129,14 @@ Don't switch to diffs without a reason.
 - Player drops on their turn → turn skips (`skipDisconnectedTurns`)
 - Vote tallies against **connected** players only, so one closed tab can't freeze a round
 - Reconnect: client stores `{code, youId}` in localStorage, sends `rejoin`, backs off up to 8s
+- **Stale-close guard**: on `rejoin`, `server.js` swaps `p.ws` to the new socket. The
+  *old* socket's `close` event can still fire later (mobile backgrounding, the 30s
+  heartbeat, flaky networks routinely reconnect before the dead socket is noticed).
+  The `close` handler only marks a player disconnected if `p.ws === ws` — i.e. this
+  is still their current socket. Without that check, a late close on an already-replaced
+  socket would wrongly flip a connected player to disconnected: `broadcast()` then
+  skips them (looks like "have to refresh to see updates"), and `reassignHostIfNeeded`
+  can steal host from someone who never left. Do not remove that check.
 
 ### Game rules
 

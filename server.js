@@ -357,7 +357,12 @@ wss.on("connection", (ws) => {
     const room = rooms.get(roomCode);
     if (!room || !pid) return;
     const p = room.players.get(pid);
-    if (p) p.connected = false;
+    // A newer connection (rejoin) may have already replaced this socket for the
+    // same player — a stale close event firing after that would otherwise mark
+    // a still-connected player as disconnected, wrongly migrate host, and cause
+    // broadcast() to skip them until they refresh.
+    if (!p || p.ws !== ws) return;
+    p.connected = false;
 
     // If everyone gone, clean up after a grace period
     const anyConnected = [...room.players.values()].some(x => x.connected);

@@ -88,6 +88,23 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
   ok("non-host cannot start", cs[0].state.status==="lobby");
   cs.forEach(c=>c.close()); await wait(200);
 
+  // ---- STALE CLOSE AFTER RECONNECT SHOULDN'T STEAL HOST OR SKIP BROADCASTS ----
+  cs = await room(3,["Host","B","C"]);
+  ok("Host is host initially", cs[0].state.isHost===true);
+  const hostCode = cs[0].code, hostYouId = cs[0].youId, oldHostSocket = cs[0];
+  const newHostSocket = client("Host-reconnect");
+  await wait(150);
+  newHostSocket.sendj({type:"rejoin", code:hostCode, youId:hostYouId});
+  await wait(300); // let rejoin land: p.ws swaps to the new socket, connected=true
+  ok("reconnected socket sees itself as host", newHostSocket.state && newHostSocket.state.isHost===true);
+  oldHostSocket.close(); // the stale old connection's close event fires AFTER the reconnect
+  await wait(500);
+  ok("host NOT reassigned by the stale close", cs[1].state.players.find(p=>p.isHost)?.name==="Host");
+  newHostSocket.sendj({type:"settings", settings:{rounds:3}});
+  await wait(300);
+  ok("reconnected host can still act (not silently marked disconnected)", cs[1].state.settings.rounds===3);
+  [newHostSocket, cs[1], cs[2]].forEach(c=>c.close()); await wait(300);
+
   // ---- 2 IMPOSTERS ----
   cs = await room(5,["1","2","3","4","5"]);
   cs[0].sendj({type:"settings",settings:{imposters:2,rounds:1}}); await wait(250);
