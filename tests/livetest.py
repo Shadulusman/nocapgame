@@ -22,7 +22,7 @@ try:
         host.goto(BASE + "/online.html"); host.wait_for_timeout(900)
         detected = host.evaluate("() => SERVER_URL")
         ok(f"auto-detected server url = {detected}", detected == "ws://127.0.0.1:8833")
-        ok("CSS applied (served over http)", host.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(15, 11, 22)")
+        ok("CSS applied (served over http)", host.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(245, 244, 249)")
 
         # root serves pass-and-play
         p2.goto(BASE + "/"); p2.wait_for_timeout(700)

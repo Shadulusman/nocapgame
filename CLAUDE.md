@@ -214,15 +214,30 @@ categories means editing both. A build step could fix this properly.
 
 ## Design system
 
-Deliberately not the AI-default near-black + acid accent.
+Clean **light theme** (converted from an earlier dark plum-ink theme at the
+owner's request, inspired by imposter.app — bright, airy, lots of whitespace).
 
-- Background: warm plum-ink `#0F0B16` (never pure black)
-- Two-role color language: **gold** `#F5B547` = civilian (diya-warm, festive);
-  **crimson** `#E5484D` = imposter
+- Background: soft off-white `#F5F4F9` with faint warm/crimson/violet radial
+  tints. White cards (`--surface`) float above it with soft shadows.
+- Two-role color language kept: **gold** `#F5B547` = civilian (diya-warm,
+  festive); **crimson** `#E5484D` = imposter. On the light background, gold as a
+  *fill* keeps dark text (`#241706`); gold as *text* uses the deeper `--gold-ink`
+  `#A96F12` for contrast — don't put `--gold` or `--gold-hi` as text on white,
+  it's unreadable.
+- **Token note:** `--cream` is the primary-text token and is now **dark**
+  (`#231D33`) — it kept its old name so the many `color:var(--cream)` usages
+  didn't all need renaming. `--ink`/`--ink-2` are light surfaces now, not dark.
+  If you flip the theme again, remap the `:root` block in **both** `index.html`
+  and `online.html` (their CSS is duplicated — see the CSS-inlining note above)
+  plus the `<meta name="theme-color">` and `manifest.json` colors.
 - Type: Bricolage Grotesque (display) / Onest (body) / Space Mono (codes, timers)
-- Signature element: the foil-embossed flip card. That's where the boldness goes;
-  everything else stays quiet.
+- Signature element: the flip card. Civ face = warm cream-gold gradient with a
+  deep-gold word; imp face = rose-tinted white with a crimson "IMPOSTER". That's
+  where the color lives; everything else stays quiet.
+- Toasts stay dark (`#2A2340`) for contrast against the light UI.
 - Mobile-first, safe-area aware, `prefers-reduced-motion` respected
+- `livetest.py` asserts `body` computes to `rgb(245, 244, 249)` — update it if
+  the background token changes.
 
 ---
 

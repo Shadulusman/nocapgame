@@ -1,4 +1,4 @@
-const CACHE = "bhedi-v4";
+const CACHE = "bhedi-v5";
 const ASSETS = [
   "./",
   "./index.html",
