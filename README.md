@@ -128,9 +128,11 @@ peek at the answer by opening their browser's dev tools.
 4. After the set number of turns, everyone votes.
 5. Group wins by voting out the bhedi. **A tie means nobody goes out - the bhedi survives.**
 
-Host settings: words per turn (1-3), turns each (1-3), imposters (1-2, needs 5+
-players for two), whether the imposter sees the category, whether they get decoy
-word hints, and which of the 15 category packs are in play.
+Everyone types one clue word per turn — the turn order visibly cycles through
+the group. Host settings: clue rounds (1-3, how many times the turn order goes
+around), imposters (1-2, needs 5+ players for two), whether the imposter sees
+the category, whether they get decoy word hints, and which of the 15 category
+packs are in play.
 
 ---
 

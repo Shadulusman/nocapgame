@@ -38,9 +38,9 @@ try:
         ok("guest has no start button", not p2.locator("#startOnline").is_visible())
         p2.screenshot(path="ui_lobby_guest.png")
 
-        # host sets 2 words/turn and starts
-        host.click("#wPlus"); host.wait_for_timeout(300)   # 2 -> 3
-        host.click("#wMinus"); host.wait_for_timeout(300)  # back to 2
+        # host bumps clue rounds up then back down, then starts
+        host.click("#rPlus"); host.wait_for_timeout(300)   # 2 -> 3
+        host.click("#rMinus"); host.wait_for_timeout(300)  # back to 2
         host.click("#startOnline"); host.wait_for_timeout(1000)
         ok("all reached role screen", all(pg.locator("#s-role").get_attribute("class").find("active")>=0 for pg in pages))
 
@@ -72,7 +72,8 @@ try:
         host.wait_for_timeout(400)
         ok("play screen active", "active" in host.locator("#s-play").get_attribute("class"))
 
-        # play clues in turn order
+        # play clues in turn order — default 2 clue rounds x 3 players = 6 turns,
+        # one word per turn, turn order visibly cycling
         names = ["Arjun","Meera","Rahul"]
         guard = 0
         while guard < 10:
@@ -84,15 +85,15 @@ try:
                 if pg.evaluate("() => S.youId") == turn_id: cur = pg; break
             if cur is None: break
             inputs = cur.locator("#clueInputs input")
-            n = inputs.count()
-            for i in range(n): inputs.nth(i).fill(f"clue{guard}{i}")
+            ok(f"exactly one clue input shown (turn {guard})", inputs.count() == 1)
+            inputs.nth(0).fill(f"clue{guard}")
             if guard == 0: cur.screenshot(path="ui_myturn.png")
             cur.click("#sendClue"); cur.wait_for_timeout(700)
             guard += 1
-        ok("3 clue sets sent", guard == 3)
+        ok("6 clue turns sent (2 rounds x 3 players)", guard == 6)
         host.wait_for_timeout(600)
-        ok("everyone sees 3 clues live", all(pg.locator(".fitem").count()>=3 for pg in pages))
-        ok("2 words per clue rendered", host.locator(".fitem").first.locator(".wd").count()==2)
+        ok("everyone sees 6 clues live", all(pg.locator(".fitem").count()>=6 for pg in pages))
+        ok("1 word per clue rendered", host.locator(".fitem").first.locator(".wd").count()==1)
         ok("advanced to vote screen", "active" in host.locator("#s-ovote").get_attribute("class"))
         host.screenshot(path="ui_vote.png")
 

@@ -285,6 +285,19 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .turn-banner.mine{border-color:rgba(245,181,71,.5);background:linear-gradient(180deg,rgba(245,181,71,.12),rgba(245,181,71,.03));}
 .turn-banner.mine .n{color:var(--gold-hi);}
 
+.turn-order{display:flex;gap:13px;overflow-x:auto;padding:2px 2px 14px;margin-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.turn-order::-webkit-scrollbar{display:none;}
+.to-item{display:flex;flex-direction:column;align-items:center;gap:6px;flex:none;width:50px;opacity:.4;transition:opacity .2s;}
+.to-item.done{opacity:.85;}
+.to-item.current{opacity:1;}
+.to-av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:12.5px;color:#241706;border:2px solid transparent;box-sizing:border-box;}
+.to-item.current .to-av{border-color:var(--gold-hi);box-shadow:0 0 0 4px rgba(245,181,71,.16);animation:pulseTurn 1.6s ease-in-out infinite;}
+.to-item.done .to-av{background:var(--surface-2) !important;color:var(--gold);}
+.to-item.done .to-av svg{width:15px;height:15px;}
+.to-nm{font-size:9.5px;color:var(--muted);max-width:50px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;}
+.to-item.current .to-nm{color:var(--gold-hi);font-weight:700;}
+@keyframes pulseTurn{0%,100%{box-shadow:0 0 0 4px rgba(245,181,71,.16);}50%{box-shadow:0 0 0 7px rgba(245,181,71,.08);}}
+
 /* your secret strip */
 .secret{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;border-radius:var(--r-md);margin-bottom:12px;border:1px solid;}
 .secret.civ{border-color:rgba(245,181,71,.4);background:linear-gradient(180deg,rgba(245,181,71,.10),transparent);}
@@ -419,13 +432,8 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
         <div class="sec-head"><h3>Round settings</h3><span class="hint">Host only</span></div>
 
         <div class="setting">
-          <div class="txt"><h4>Words per turn</h4><p>How many clue words each player types.</p></div>
-          <div class="stepper"><button id="wMinus">−</button><span id="wCount">2</span><button id="wPlus">+</button></div>
-        </div>
-
-        <div class="setting">
-          <div class="txt"><h4>Turns each</h4><p>How many times the circle goes around.</p></div>
-          <div class="stepper"><button id="rMinus">−</button><span id="rCount">1</span><button id="rPlus">+</button></div>
+          <div class="txt"><h4>Clue rounds</h4><p>Everyone types one word, in turn. This is how many times the circle goes around.</p></div>
+          <div class="stepper"><button id="rMinus">−</button><span id="rCount">2</span><button id="rPlus">+</button></div>
         </div>
 
         <div class="setting">
@@ -497,6 +505,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
         <div class="l" id="turnL">Now typing</div>
         <div class="n" id="turnN">—</div>
       </div>
+      <div class="turn-order" id="turnOrder"></div>
       <div class="feed" id="feed"></div>
       <div style="height:12px"></div>
     </div>
@@ -690,10 +699,8 @@ $("#goBtn").addEventListener("click", () => {
 /* ---------- lobby controls ---------- */
 function pushSettings(patch){ send({ type:"settings", settings: patch }); buzz(8); }
 const st = () => (S.state && S.state.settings) || {};
-$("#wMinus").addEventListener("click", ()=>pushSettings({ wordsPerTurn: Math.max(1,(st().wordsPerTurn||2)-1) }));
-$("#wPlus") .addEventListener("click", ()=>pushSettings({ wordsPerTurn: Math.min(3,(st().wordsPerTurn||2)+1) }));
-$("#rMinus").addEventListener("click", ()=>pushSettings({ rounds: Math.max(1,(st().rounds||1)-1) }));
-$("#rPlus") .addEventListener("click", ()=>pushSettings({ rounds: Math.min(3,(st().rounds||1)+1) }));
+$("#rMinus").addEventListener("click", ()=>pushSettings({ rounds: Math.max(1,(st().rounds||2)-1) }));
+$("#rPlus") .addEventListener("click", ()=>pushSettings({ rounds: Math.min(3,(st().rounds||2)+1) }));
 $("#iMinus").addEventListener("click", ()=>pushSettings({ imposters: Math.max(1,(st().imposters||1)-1) }));
 $("#iPlus") .addEventListener("click", ()=>pushSettings({ imposters: Math.min(2,(st().imposters||1)+1) }));
 $("#oCat").addEventListener("click", ()=>pushSettings({ seeCat: !st().seeCat }));
@@ -823,7 +830,6 @@ function renderLobby(){
   $("#startOnline").classList.toggle("hidden", !s.isHost);
 
   if (s.isHost) {
-    $("#wCount").textContent = s.settings.wordsPerTurn;
     $("#rCount").textContent = s.settings.rounds;
     $("#iCount").textContent = s.settings.imposters;
     $("#oCat").classList.toggle("on", s.settings.seeCat);
@@ -840,7 +846,7 @@ function renderLobby(){
     const enough = s.players.length >= 3;
     $("#startOnline").disabled = !enough;
     $("#lobbyNote").textContent = enough
-      ? `${s.players.length} players · ${s.settings.wordsPerTurn} word${s.settings.wordsPerTurn>1?"s":""} each · ${s.settings.rounds} turn${s.settings.rounds>1?"s":""} around`
+      ? `${s.players.length} players · one word at a time · ${s.settings.rounds} clue round${s.settings.rounds>1?"s":""} each`
       : `Need ${3-s.players.length} more player${3-s.players.length>1?"s":""}`;
   } else {
     $("#lobbyNote").textContent = "The host starts the game";
@@ -858,9 +864,22 @@ function feedHtml(clues, players){
   }).join("");
 }
 
+function turnOrderHtml(r, youId){
+  const check = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`;
+  return r.order.map((p,i) => {
+    const state = i < r.turnIndex ? "done" : i === r.turnIndex ? "current" : "upcoming";
+    const you = p.id === youId ? " you" : "";
+    return `<div class="to-item ${state}${you}">
+      <span class="to-av" style="background:${AV[i%AV.length]}">${state==="done" ? check : initials(p.name)}</span>
+      <span class="to-nm">${p.id===youId?"You":p.name}</span>
+    </div>`;
+  }).join("");
+}
+
 function renderPlay(){
   const s = S.state, r = s.round; if(!r) return;
-  $("#playRound").textContent = `Round ${r.roundNo} of ${r.roundsTotal}`;
+  $("#playRound").textContent = `Clue round ${r.roundNo} of ${r.roundsTotal}`;
+  $("#turnOrder").innerHTML = turnOrderHtml(r, s.youId);
 
   const strip = $("#secretStrip");
   strip.className = "secret " + (r.yourRole==="imposter" ? "imp" : "civ");
@@ -893,22 +912,16 @@ function renderPlay(){
   if (mine) {
     foot.classList.remove("hidden");
     const box = $("#clueInputs");
-    if (box.children.length !== r.wordsPerTurn) {
+    if (box.children.length !== 1) {
       box.innerHTML = "";
-      for (let i=0;i<r.wordsPerTurn;i++){
-        const inp = document.createElement("input");
-        inp.type="text"; inp.maxLength=22; inp.autocomplete="off";
-        inp.placeholder = r.wordsPerTurn===1 ? "Your clue word" : `Clue word ${i+1}`;
-        inp.enterKeyHint = i===r.wordsPerTurn-1 ? "send" : "next";
-        inp.addEventListener("keydown", e => {
-          if (e.key === "Enter") {
-            const next = box.children[i+1];
-            if (next) next.focus(); else $("#sendClue").click();
-          }
-        });
-        box.appendChild(inp);
-      }
+      const inp = document.createElement("input");
+      inp.type="text"; inp.maxLength=22; inp.autocomplete="off";
+      inp.placeholder = "Your clue word";
+      inp.enterKeyHint = "send";
+      inp.addEventListener("keydown", e => { if (e.key === "Enter") $("#sendClue").click(); });
+      box.appendChild(inp);
     }
+    if (!wasMine) setTimeout(() => { const i = $("#clueInputs input"); if (i) i.focus(); }, 60);
     $("#clueNote").textContent = r.yourRole==="imposter"
       ? "Make it sound like you know the word."
       : "Don't make it too obvious.";

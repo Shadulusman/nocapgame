@@ -28,8 +28,8 @@ setTimeout(()=>{ console.log("TIMEOUT"); process.exit(1); }, 20000);
   ok("host flag correct", A.state.isHost===true && B.state.isHost===false);
   const X=client("Ghost"); await wait(200);
   X.sendj({type:"join",code:"ZZZZ",name:"Ghost"}); await wait(250);
-  A.sendj({type:"settings",settings:{wordsPerTurn:2,rounds:1,imposters:1}}); await wait(250);
-  ok("settings sync to non-host", B.state.settings.wordsPerTurn===2);
+  A.sendj({type:"settings",settings:{rounds:1,imposters:1}}); await wait(250);
+  ok("settings sync to non-host", B.state.settings.rounds===1);
   A.sendj({type:"start"}); await wait(400);
   const all=[A,B,C];
   ok("status=playing", A.state.status==="playing");
@@ -45,12 +45,11 @@ setTimeout(()=>{ console.log("TIMEOUT"); process.exit(1); }, 20000);
   let g=0;
   while(A.state.status==="playing" && g++<30){
     const cur=all.find(x=>x.youId===A.state.round.turnPlayerId);
-    const n=A.state.round.wordsPerTurn;
-    cur.sendj({type:"clue",words:Array.from({length:n},(_,i)=>cur.nm.toLowerCase()+"-w"+(i+1))});
+    cur.sendj({type:"clue",words:[cur.nm.toLowerCase()+"-w1"]});
     await wait(180);
   }
   ok("3 clues captured", A.state.round.clues.length===3);
-  ok("2 words per turn", A.state.round.clues.every(c=>c.words.length===2));
+  ok("1 word per turn", A.state.round.clues.every(c=>c.words.length===1));
   ok("feed live for all", B.state.round.clues.length===3 && C.state.round.clues.length===3);
   console.log("      feed: "+A.state.round.clues.map(c=>c.name+" → "+c.words.join(", ")).join("  |  "));
   ok("auto-advance to voting", A.state.status==="voting");

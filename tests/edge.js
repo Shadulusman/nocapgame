@@ -24,7 +24,7 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
 
   // ---- TIE VOTE ----
   let cs = await room(4,["A","B","C","D"]);
-  cs[0].sendj({type:"settings",settings:{rounds:1,wordsPerTurn:1,imposters:1}}); await wait(200);
+  cs[0].sendj({type:"settings",settings:{rounds:1,imposters:1}}); await wait(200);
   cs[0].sendj({type:"start"}); await wait(300);
   let g=0;
   while(cs[0].state.status==="playing" && g++<20){
@@ -53,7 +53,7 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
 
   // ---- PLAYER DISCONNECTS ON THEIR TURN ----
   cs = await room(4,["P","Q","R","S"]);
-  cs[0].sendj({type:"settings",settings:{rounds:1,wordsPerTurn:1}}); await wait(200);
+  cs[0].sendj({type:"settings",settings:{rounds:1}}); await wait(200);
   cs[0].sendj({type:"start"}); await wait(350);
   const turnId = cs[0].state.round.turnPlayerId;
   const victim = cs.find(x=>x.youId===turnId);
@@ -82,15 +82,15 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},25000);
 
   // ---- NON-HOST CANNOT START / CHANGE SETTINGS ----
   cs = await room(3,["M","N","O"]);
-  cs[1].sendj({type:"settings",settings:{wordsPerTurn:3}}); await wait(250);
-  ok("non-host cannot change settings", cs[0].state.settings.wordsPerTurn===2);
+  cs[1].sendj({type:"settings",settings:{rounds:3}}); await wait(250);
+  ok("non-host cannot change settings", cs[0].state.settings.rounds===2);
   cs[1].sendj({type:"start"}); await wait(250);
   ok("non-host cannot start", cs[0].state.status==="lobby");
   cs.forEach(c=>c.close()); await wait(200);
 
   // ---- 2 IMPOSTERS ----
   cs = await room(5,["1","2","3","4","5"]);
-  cs[0].sendj({type:"settings",settings:{imposters:2,rounds:1,wordsPerTurn:1}}); await wait(250);
+  cs[0].sendj({type:"settings",settings:{imposters:2,rounds:1}}); await wait(250);
   cs[0].sendj({type:"start"}); await wait(400);
   const impCount = cs.filter(x=>x.state.round.yourRole==="imposter").length;
   ok("2 imposters assigned", impCount===2);

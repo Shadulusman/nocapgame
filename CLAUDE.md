@@ -116,8 +116,9 @@ Don't switch to diffs without a reason.
 - Non-host cannot change settings or start
 - Out-of-turn `clue` rejected
 - `start` blocked under 3 players
-- Clue words trimmed to 22 chars, capped at `wordsPerTurn`
-- `imposters` clamped 1–2 and to `players-2`; `wordsPerTurn` 1–3; `rounds` 1–3
+- Clue words trimmed to 22 chars, capped at 1 per turn (one word, one player, one turn)
+- `imposters` clamped 1–2 and to `players-2`; `rounds` 1–3 (rounds = how many times the
+  turn order cycles, one word per player per cycle)
 - Path traversal blocked in static handler
 
 ### Disconnect handling
@@ -130,9 +131,13 @@ Don't switch to diffs without a reason.
 ### Game rules
 
 Civilians share a secret word; imposter(s) don't. Players take turns typing
-1–3 clue words, visible live to everyone. After N turns around, all vote.
-Group wins by voting out an imposter. **A tie means nobody is voted out and the
-imposter wins** (`tallyAndFinish`).
+**one clue word at a time**, visible live to everyone, cycling through the same
+turn order for `rounds` (1–3) passes. The client renders the full turn order as
+a strip of avatars (`turnOrderHtml` in `online.html`) so it's visible who has
+gone, whose turn it is, and who's next — this used to be implicit and confusing
+when a turn let you submit several words in one burst; it's one word per turn now.
+After the last pass, all vote. Group wins by voting out an imposter. **A tie
+means nobody is voted out and the imposter wins** (`tallyAndFinish`).
 
 Turn order is **reshuffled every round** (`order` in `startRound`). This matters:
 clues are in a persistent visible feed, so going last means reading everyone

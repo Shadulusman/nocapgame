@@ -50,8 +50,7 @@ function makeRoom(hostId) {
     settings: {
       categories: CATEGORIES.map(c => c.id),
       imposters: 1,
-      wordsPerTurn: 2,
-      rounds: 1,
+      rounds: 2,
       seeCat: true,
       hint: true,
     },
@@ -84,7 +83,11 @@ function sanitize(room, pid) {
       turnName: room.status === "playing" && room.players.get(turnId) ? room.players.get(turnId).name : null,
       roundNo: r.roundNo + 1,
       roundsTotal: room.settings.rounds,
-      wordsPerTurn: room.settings.wordsPerTurn,
+      order: r.order.map(id => ({
+        id, name: room.players.get(id) ? room.players.get(id).name : "?",
+        connected: room.players.get(id) ? room.players.get(id).connected : false,
+      })),
+      turnIndex: r.turnIndex,
       clues: r.clues.map(c => ({ playerId: c.playerId, name: c.name, words: c.words, roundNo: c.roundNo })),
       yourRole: amImp ? "imposter" : "civilian",
       yourWord: amImp ? null : r.word,
@@ -283,7 +286,6 @@ wss.on("connection", (ws) => {
       if (Array.isArray(m.categories)) s.categories = m.categories.filter(id => CAT_INDEX[id]);
       if (s.categories.length === 0) s.categories = CATEGORIES.map(c => c.id);
       if (Number.isInteger(m.imposters)) s.imposters = Math.max(1, Math.min(2, m.imposters));
-      if (Number.isInteger(m.wordsPerTurn)) s.wordsPerTurn = Math.max(1, Math.min(3, m.wordsPerTurn));
       if (Number.isInteger(m.rounds)) s.rounds = Math.max(1, Math.min(3, m.rounds));
       if (typeof m.seeCat === "boolean") s.seeCat = m.seeCat;
       if (typeof m.hint === "boolean") s.hint = m.hint;
@@ -302,8 +304,8 @@ wss.on("connection", (ws) => {
       const r = room.round;
       if (r.order[r.turnIndex] !== pid) return sendErr(ws, "Not your turn.");
       let words = Array.isArray(msg.words) ? msg.words : [];
-      words = words.map(w => String(w || "").trim().slice(0, 22)).filter(Boolean).slice(0, room.settings.wordsPerTurn);
-      if (words.length === 0) return sendErr(ws, "Type at least one word.");
+      words = words.map(w => String(w || "").trim().slice(0, 22)).filter(Boolean).slice(0, 1);
+      if (words.length === 0) return sendErr(ws, "Type your clue word.");
       r.clues.push({ playerId: pid, name: room.players.get(pid).name, words, roundNo: r.roundNo });
       advanceTurn(room);
       broadcast(room);
