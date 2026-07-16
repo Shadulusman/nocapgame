@@ -112,6 +112,18 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},45000);
   ok("vote resolves using connected voters only", ref.state.status!=="voting");
   others.forEach(c=>c.close()); await wait(300);
 
+  // ---- FOUNDER RECLAIMS HOST ON RECONNECT ----
+  cs = await room(3,["Founder","B2","C2"]);
+  const fCode = cs[0].code, fId = cs[0].youId;
+  ok("founder starts as host", cs[0].state.isHost===true);
+  cs[0].close(); await wait(500); // founder drops -> host migrates
+  ok("host migrated away while founder is gone", cs[1].state.players.find(p=>p.isHost)?.name!=="Founder");
+  const back = client("Founder-back"); await wait(150);
+  back.sendj({type:"rejoin", code:fCode, youId:fId}); await wait(400);
+  ok("founder reclaims host on reconnect", cs[1].state.players.find(p=>p.isHost)?.name==="Founder");
+  ok("reconnected founder sees itself as host", back.state && back.state.isHost===true);
+  [back, cs[1], cs[2]].forEach(c=>c.close()); await wait(300);
+
   // ---- START WITH 2 PLAYERS BLOCKED ----
   cs = await room(2,["X","Y"]);
   cs[0].sendj({type:"start"}); await wait(300);

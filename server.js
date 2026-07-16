@@ -53,6 +53,7 @@ function makeRoom(hostId) {
   return {
     code: (() => { let c; do { c = newCode(); } while (rooms.has(c)); return c; })(),
     hostId,
+    founderId: hostId,   // the creator — reclaims host when they reconnect
     status: "lobby",
     isPublic: false,     // private by default; only public rooms show in the browser
     createdAt: now(),
@@ -452,8 +453,12 @@ wss.on("connection", (ws) => {
       pid = msg.youId; roomCode = code;
       const p = room.players.get(pid);
       p.ws = ws; p.connected = true;
-      ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
+      // The original creator reclaims host when they come back online — host only
+      // migrated away because they dropped. (Only same-identity reconnects reach
+      // here; someone who intentionally left cleared their session and can't.)
+      if (pid === room.founderId) room.hostId = pid;
       refreshAutoStart(room);
+      ws.send(JSON.stringify({ type: "joined", code, youId: pid }));
       broadcast(room);
       return;
     }
