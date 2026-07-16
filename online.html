@@ -68,7 +68,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 /* ---------- Header / wordmark ---------- */
 .topbar{padding:calc(var(--safe-t) + 14px) 18px 6px; display:flex; align-items:center; justify-content:space-between; gap:10px;}
 .brand{display:flex; align-items:center; gap:10px;}
-.brand-logo{height:40px; width:auto; display:block; flex:none;}
+.brand-logo{height:54px; width:auto; display:block; flex:none;}
 .brand-txt{font-family:var(--ff-disp); font-weight:800; font-size:18px; line-height:1; letter-spacing:.05em; color:var(--gold);}
 .brand-txt small{display:block; font-family:var(--ff-mono); font-weight:400; font-size:8px; letter-spacing:.15em; color:var(--muted); margin-top:4px;}
 .mark{width:38px; height:38px; border-radius:11px; position:relative; flex:none;
@@ -306,21 +306,23 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .rc-meta{flex:1;min-width:0;}
 .rc-code{font-family:var(--ff-mono);font-size:11px;letter-spacing:.12em;color:var(--muted-2);}
 .rc-name{font-family:var(--ff-disp);font-weight:700;font-size:17px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.rc-join{flex:none;background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#FFFFFF;font-family:var(--ff-disp);font-weight:700;font-size:14px;padding:9px 20px;border-radius:100px;}
+.rc-join{flex:none;background:linear-gradient(180deg,var(--blue-hi),var(--blue));color:#FFFFFF;font-family:var(--ff-disp);font-weight:700;font-size:14px;padding:9px 20px;border-radius:100px;}
 .rc-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;}
-.rc-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:var(--muted);background:var(--ink-2);border:1px solid var(--line);border-radius:100px;padding:5px 11px;}
+.rc-chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted);background:var(--ink-2);border:1px solid var(--line);border-radius:100px;padding:5px 11px;}
+.rc-chip .cdot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:none;}
 .rc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:13px;}
-.rc-avs{display:flex;}
+.rc-avs{display:flex;align-items:center;}
 .rc-avs .a{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:11px;color:#FFFFFF;border:2px solid var(--surface);margin-left:-8px;}
 .rc-avs .a:first-child{margin-left:0;}
+.rc-count{font-size:12px;font-weight:600;color:var(--muted);margin-left:8px;white-space:nowrap;}
 .rc-status{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:100px;white-space:nowrap;}
 .rc-status .dot{width:7px;height:7px;border-radius:50%;}
 .rc-status.ready{color:var(--ok);background:rgba(43,227,138,.13);}
 .rc-status.ready .dot{background:var(--ok);}
-.rc-status.count{color:var(--gold-ink);background:rgba(225,29,42,.16);}
-.rc-status.count .dot{background:var(--gold);}
-.rc-status.need{color:var(--muted);background:var(--ink-2);}
-.rc-status.need .dot{background:var(--muted-2);}
+.rc-status.count{color:var(--blue-ink);background:rgba(30,127,224,.12);}
+.rc-status.count .dot{background:var(--blue);}
+.rc-status.need{color:#C77A17;background:rgba(240,150,20,.14);}
+.rc-status.need .dot{background:#F5991E;}
 .field{width:100%;background:var(--surface);border:1px solid var(--line);color:var(--cream);border-radius:var(--r-md);
   padding:14px 15px;font-family:var(--ff-body);font-size:15px;outline:none;transition:.18s;}
 .field:focus{border-color:var(--gold-deep);box-shadow:0 0 0 3px rgba(225,29,42,.13);}
@@ -446,7 +448,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .stage-count,.flabel,.sec-head h3{text-transform:uppercase;}
 .sec-head h3{letter-spacing:.06em;font-size:14px;}
 .mode-card .mt,.rc-name,.turn-banner .n{letter-spacing:.02em;}
-.rc-join{box-shadow:0 6px 16px -6px rgba(225,29,42,.55);}
+.rc-join{box-shadow:0 6px 16px -6px rgba(30,127,224,.6);}
 </style>
 </head>
 <body>
@@ -486,7 +488,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 
       <div class="section">
         <p class="flabel">Your name</p>
-        <input class="field" id="nameIn" type="text" placeholder="e.g. Shadul" maxlength="14" autocomplete="off" enterkeyhint="done" />
+        <input class="field" id="nameIn" type="text" placeholder="e.g. John" maxlength="14" autocomplete="off" enterkeyhint="done" />
       </div>
 
       <div class="section">
@@ -888,8 +890,9 @@ function renderRoomsList(){
   if (!list.length) { box.innerHTML = `<p class="empty-note">No public rooms right now — make one!</p>`; return; }
   box.innerHTML = list.map(r => {
     const avs = (r.names||[]).map(n => `<span class="a" style="background:${avColor(n)}">${initials(n)}</span>`).join("");
+    const catLabel = r.cats === 1 ? r.cat1 : `${r.cats} packs`;
     let status;
-    if (r.players < 3) status = `<span class="rc-status need"><span class="dot"></span>Needs ${3-r.players} more</span>`;
+    if (r.players < 3) status = `<span class="rc-status need"><span class="dot"></span>${r.players === 0 ? "Needs 3 players" : `Need ${3-r.players} more`}</span>`;
     else if (r.autoStartAt && r.autoStartAt > Date.now()) status = `<span class="rc-status count"><span class="dot"></span>Starts in ${fmtCountdown(r.autoStartAt - Date.now())}</span>`;
     else status = `<span class="rc-status ready"><span class="dot"></span>Ready to start</span>`;
     return `<button class="room-card" data-code="${r.code}">
@@ -898,8 +901,8 @@ function renderRoomsList(){
         <div class="rc-meta"><div class="rc-code">#${r.code}</div><div class="rc-name">${escapeHtml(r.hostName)}'s Room</div></div>
         <span class="rc-join">Join</span>
       </div>
-      <div class="rc-chips"><span class="rc-chip">🕵️ ${r.imposters} Imposter${r.imposters>1?"s":""}</span><span class="rc-chip">👥 ${r.players}/${r.maxPlayers}</span></div>
-      <div class="rc-foot"><div class="rc-avs">${avs}</div>${status}</div>
+      <div class="rc-chips"><span class="rc-chip"><span class="cdot"></span>${escapeHtml(catLabel)}</span><span class="rc-chip">🕵️ ${r.imposters} Imposter${r.imposters>1?"s":""}</span></div>
+      <div class="rc-foot"><div class="rc-avs">${avs}<span class="rc-count">${r.players} joined</span></div>${status}</div>
     </button>`;
   }).join("");
 }

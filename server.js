@@ -309,6 +309,8 @@ const httpServer = http.createServer((req, res) => {
           maxPlayers: MAX_PLAYERS,
           imposters: r.settings.imposters,
           names: conn.slice(0, 6).map(p => p.name),      // for the avatar row
+          cats: r.settings.categories.length,             // for the category chip
+          cat1: (CAT_INDEX[r.settings.categories[0]] || {}).name || "Mixed",
           autoStartAt: r.autoStartAt || null,             // ms, drives "Starts in 0:58"
         };
       })
