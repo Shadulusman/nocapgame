@@ -1,0 +1,19 @@
+name: keep-warm
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the app
+        run: |
+          if [ -z "${{ vars.RENDER_URL }}" ]; then
+            echo "RENDER_URL variable is not set — skipping."
+            exit 0
+          fi
+          echo "Pinging ${{ vars.RENDER_URL }}/health"
+          curl -fsS --max-time 90 "${{ vars.RENDER_URL }}/health" && echo " — awake" || echo "ping failed (server may have been cold; waking now)"
