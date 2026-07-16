@@ -42,24 +42,35 @@ try:
         # full game over the single deploy
         for pg in [p2,p3]:
             pg.goto(BASE + "/online.html"); pg.wait_for_timeout(700)
-        host.fill("#nameIn","Arjun"); host.click("#goBtn"); host.wait_for_timeout(1200)
+        host.fill("#nameIn","Arjun"); host.click("#createPublicBtn"); host.wait_for_timeout(1200)
         code = host.inner_text("#lobbyCode").strip()
-        ok(f"room created, code={code}", re.fullmatch(r"[A-Z0-9]{4}", code) is not None)
+        ok(f"public room created, code={code}", re.fullmatch(r"[A-Z0-9]{4}", code) is not None)
         for pg,nm in [(p2,"Meera"),(p3,"Rahul")]:
             pg.fill("#nameIn",nm); pg.click("#mJoin"); pg.wait_for_timeout(200)
             pg.fill("#codeIn",code); pg.click("#goBtn"); pg.wait_for_timeout(900)
         host.wait_for_timeout(500)
         ok("3 players joined via one deploy", host.locator(".rost").count()==3)
 
-        # public room browser: this lobby room should be listed while open
+        # public room browser: this lobby room should be listed + joinable
         rooms_open = p2.evaluate("async()=>{const r=await fetch('/rooms');return await r.json();}")
-        ok("open room browser lists our lobby room", any(x["code"]==code for x in rooms_open))
-        listed = next(x for x in rooms_open if x["code"]==code)
-        ok("listed room shows correct player count", listed["players"]==3)
+        listed = next((x for x in rooms_open if x["code"]==code), None)
+        ok("public browser lists the lobby room", listed is not None)
+        ok("listed room shows correct player count", listed and listed["players"]==3)
+        ok("lobby room is joinable", listed and listed["joinable"]==True)
+
+        # a private room should NOT appear in the public browser (fresh context = no shared session)
+        privctx = b.new_context(viewport={"width":390,"height":844}); priv = privctx.new_page()
+        priv.goto(BASE+"/online.html"); priv.wait_for_timeout(500)
+        priv.fill("#nameIn","Solo"); priv.click("#goBtn"); priv.wait_for_timeout(900)
+        priv_code = priv.inner_text("#lobbyCode").strip()
+        rooms2 = p2.evaluate("async()=>{const r=await fetch('/rooms');return await r.json();}")
+        ok("private room is hidden from the public browser", not any(x["code"]==priv_code for x in rooms2))
+        privctx.close()
 
         host.click("#startOnline"); host.wait_for_timeout(900)
         rooms_after_start = p2.evaluate("async()=>{const r=await fetch('/rooms');return await r.json();}")
-        ok("room drops off the browser once the game starts", not any(x["code"]==code for x in rooms_after_start))
+        started = next((x for x in rooms_after_start if x["code"]==code), None)
+        ok("started public room shows as in-game (not joinable)", started is not None and started["inGame"]==True and started["joinable"]==False)
         for pg in pages: pg.click("#roleCard"); pg.wait_for_timeout(600)
         imp = None
         for pg in pages:

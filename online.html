@@ -501,6 +501,17 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .rv-tags{display:flex;align-items:center;gap:6px;flex:none;}
 .rv-dead{font-family:var(--ff-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:700;padding:5px 9px;border-radius:100px;background:rgba(225,29,42,.12);color:var(--gold-ink);}
 .rev-row .who{gap:12px;}
+
+/* ---- room-management extras ---- */
+.rc-join.off{background:var(--ink-2);color:var(--muted);box-shadow:none;}
+.room-card.ingame{opacity:.94;}
+.rc-status.ingame{color:var(--ok);background:rgba(18,160,92,.12);}
+.rc-status.ingame .dot.live{background:var(--ok);animation:blink 1s ease-in-out infinite;}
+.rost{position:relative;}
+.rost-kick{flex:none;width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);display:grid;place-items:center;cursor:pointer;margin-left:2px;transition:.14s;}
+.rost-kick svg{width:13px;height:13px;}
+.rost-kick:active{transform:scale(.9);}
+.rost-kick:hover{border-color:var(--gold);color:var(--gold);}
 </style>
 </head>
 <body>
@@ -565,6 +576,7 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 
       <div class="section">
         <div class="sec-head"><h3>Public Rooms</h3><button class="linkbtn" id="refreshRooms">Refresh</button></div>
+        <button class="cta ghost" id="createPublicBtn" style="font-size:14px;padding:13px;margin-bottom:12px;">+ Create a public room</button>
         <div class="open-rooms" id="openRooms">
           <p class="empty-note">Looking for open rooms…</p>
         </div>
@@ -842,7 +854,7 @@ const S = {
   connected:false, retry:0, intentionalClose:false,
   voteTimerHandle:null, openRoomsHandle:null, roomsTick:null, lobbyTick:null,
   rooms:[], chatOpen:false, chatSeen:0,
-  pendingIntent:null, wakeTimer:null,
+  pendingIntent:null, wakeTimer:null, createPublic:false,
 };
 
 function go(id){
@@ -872,7 +884,7 @@ function replayIntent(){
   const sess = JSON.parse(localStorage.getItem("nocap_session") || "null");
   if (sess && sess.code) { send({ type:"rejoin", code:sess.code, youId:sess.youId }); return; }
   const p = S.pendingIntent;
-  if (p) send(p.type === "create" ? { type:"create", name:p.name } : { type:"join", code:p.code, name:p.name });
+  if (p) send(p.type === "create" ? { type:"create", name:p.name, public:p.public } : { type:"join", code:p.code, name:p.name });
 }
 
 function connect(then){
@@ -893,6 +905,9 @@ function connect(then){
       S.pendingIntent = null; clearTimeout(S.wakeTimer);
       $("#goBtn").disabled = false; $("#entryNote").textContent = "Runs on your own game server";
       localStorage.setItem("nocap_session", JSON.stringify({ code:m.code, youId:m.youId })); return; }
+    if (m.type === "kicked") { S.intentionalClose = true; localStorage.removeItem("nocap_session");
+      if (S.ws) S.ws.close(); S.state=null; S.code=""; S.youId=null; startRoomsBrowser(); go("entry");
+      toast("The host removed you from the room"); return; }
     if (m.type === "error") { toast(m.message); return; }
     if (m.type === "state") { S.prev = S.state; S.state = m; render(); }
   };
@@ -916,8 +931,13 @@ function send(o){ if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)
 
 /* ---------- entry ---------- */
 $("#mCreate").addEventListener("click", () => {
-  S.mode="create"; $("#mCreate").classList.add("on"); $("#mJoin").classList.remove("on");
-  $("#joinBlock").classList.add("hidden"); $("#goBtn").textContent="Make a room"; buzz(8);
+  S.mode="create"; S.createPublic=false; $("#mCreate").classList.add("on"); $("#mJoin").classList.remove("on");
+  $("#joinBlock").classList.add("hidden"); $("#goBtn").textContent="Make a private room"; buzz(8);
+});
+// "Create a public room" — same create flow, but listed in the browser for anyone to join
+$("#createPublicBtn").addEventListener("click", () => {
+  if (!$("#nameIn").value.trim()) { toast("Type your name first"); $("#nameIn").focus(); return; }
+  S.mode="create"; S.createPublic=true; buzz(10); $("#goBtn").click();
 });
 $("#mJoin").addEventListener("click", () => {
   S.mode="join"; $("#mJoin").classList.add("on"); $("#mCreate").classList.remove("on");
@@ -945,15 +965,21 @@ function renderRoomsList(){
   box.innerHTML = list.map(r => {
     const avs = (r.names||[]).map(n => `<span class="a" style="background:${avColor(n)}">${initials(n)}</span>`).join("");
     const catLabel = r.cats === 1 ? r.cat1 : `${r.cats} packs`;
-    let status;
-    if (r.players < 3) status = `<span class="rc-status need"><span class="dot"></span>${r.players === 0 ? "Needs 3 players" : `Need ${3-r.players} more`}</span>`;
-    else if (r.autoStartAt && r.autoStartAt > Date.now()) status = `<span class="rc-status count"><span class="dot"></span>Starts in ${fmtCountdown(r.autoStartAt - Date.now())}</span>`;
-    else status = `<span class="rc-status ready"><span class="dot"></span>Ready to start</span>`;
-    return `<button class="room-card" data-code="${r.code}">
+    let status, joinBtn;
+    if (r.inGame) {
+      status = `<span class="rc-status ingame"><span class="dot live"></span>In game</span>`;
+      joinBtn = `<span class="rc-join off">In game</span>`;
+    } else {
+      if (r.players < 3) status = `<span class="rc-status need"><span class="dot"></span>${r.players === 0 ? "Needs 3 players" : `Need ${3-r.players} more`}</span>`;
+      else if (r.autoStartAt && r.autoStartAt > Date.now()) status = `<span class="rc-status count"><span class="dot"></span>Starts in ${fmtCountdown(r.autoStartAt - Date.now())}</span>`;
+      else status = `<span class="rc-status ready"><span class="dot"></span>Ready to start</span>`;
+      joinBtn = `<span class="rc-join">Join</span>`;
+    }
+    return `<button class="room-card${r.inGame?' ingame':''}" data-code="${r.code}" data-joinable="${r.joinable?1:0}">
       <div class="rc-top">
         <span class="rc-av" style="background:${avColor(r.hostName)}">${initials(r.hostName)}</span>
         <div class="rc-meta"><div class="rc-code">#${r.code}</div><div class="rc-name">${escapeHtml(r.hostName)}'s Room</div></div>
-        <span class="rc-join">Join</span>
+        ${joinBtn}
       </div>
       <div class="rc-chips"><span class="rc-chip"><span class="cdot"></span>${escapeHtml(catLabel)}</span><span class="rc-chip">🕵️ ${r.imposters} Imposter${r.imposters>1?"s":""}</span></div>
       <div class="rc-foot"><div class="rc-avs">${avs}<span class="rc-count">${r.players} joined</span></div>${status}</div>
@@ -962,6 +988,7 @@ function renderRoomsList(){
 }
 $("#openRooms").addEventListener("click", e => {
   const c = e.target.closest(".room-card"); if (!c) return;
+  if (c.dataset.joinable !== "1") { toast("That game's already in progress"); return; }
   if (!$("#nameIn").value.trim()) { toast("Type your name first"); $("#nameIn").focus(); return; }
   S.mode="join"; $("#codeIn").value = c.dataset.code; buzz(10); $("#goBtn").click();
 });
@@ -974,7 +1001,8 @@ $("#goBtn").addEventListener("click", () => {
   S.name = name;
   const code = $("#codeIn").value.trim().toUpperCase();
   if (S.mode === "join" && code.length !== 4) { toast("Room codes are 4 letters"); return; }
-  S.pendingIntent = S.mode === "create" ? { type:"create", name } : { type:"join", code, name };
+  S.pendingIntent = S.mode === "create" ? { type:"create", name, public:S.createPublic } : { type:"join", code, name };
+  S.createPublic = false;   // reset — next plain "Make a room" is private again
   $("#goBtn").disabled = true; $("#entryNote").textContent = "Connecting…";
   connect(replayIntent);
   clearTimeout(S.wakeTimer);
@@ -1000,13 +1028,18 @@ $("#oCatGrid").addEventListener("click", e => {
   pushSettings({ categories: [...cur] });
 });
 $("#startOnline").addEventListener("click", () => { buzz(14); send({ type:"start" }); });
+$("#roster").addEventListener("click", e => {
+  const k = e.target.closest(".rost-kick"); if(!k) return;
+  send({ type:"kick", targetId: k.dataset.id }); buzz(12);
+});
 $("#copyCode").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(S.code); toast("Code copied"); } catch { toast(S.code); }
 });
 $("#shareCode").addEventListener("click", async () => {
-  const text = `Join my NOCAP game — code ${S.code}`;
-  if (navigator.share) { try { await navigator.share({ text }); } catch(e){} }
-  else { try { await navigator.clipboard.writeText(text); toast("Invite copied"); } catch { toast(text); } }
+  const url = `${location.origin}${location.pathname}?room=${S.code}`;
+  const text = `Join my NOCAP game — tap to join room ${S.code}: ${url}`;
+  if (navigator.share) { try { await navigator.share({ title:"NOCAP", text:`Join my NOCAP game (room ${S.code})`, url }); return; } catch(e){} }
+  try { await navigator.clipboard.writeText(url); toast("Invite link copied"); } catch { toast(url); }
 });
 function leave(){
   S.intentionalClose = true;
@@ -1175,10 +1208,11 @@ function renderLobby(){
   s.players.forEach((p,i) => {
     const el = document.createElement("div");
     el.className = "rost" + (p.id===s.youId ? " you" : "");
+    const kick = (s.isHost && p.id!==s.youId) ? `<button class="rost-kick" data-id="${p.id}" aria-label="Remove ${escapeHtml(p.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : "";
     el.innerHTML = `<span class="av" style="background:${AV[i%AV.length]}">${initials(p.name)}</span>
-      <span class="nm">${p.name}${p.id===s.youId?' <span style="color:var(--muted);font-weight:400;font-size:12px;">· you</span>':''}</span>
+      <span class="nm">${escapeHtml(p.name)}${p.id===s.youId?' <span style="color:var(--muted);font-weight:400;font-size:12px;">· you</span>':''}</span>
       ${p.isHost?'<span class="tag">Host</span>':''}
-      <span class="dot ${p.connected?'':'off'}"></span>`;
+      <span class="dot ${p.connected?'':'off'}"></span>${kick}`;
     r.appendChild(el);
   });
   if (S.prev && S.prev.status==="lobby" && s.players.length > S.prev.players.length) sfx.join();
@@ -1381,11 +1415,22 @@ function renderResults(){
   $("#oNote").textContent = s.isHost ? "" : "Waiting for the host to start again";
 }
 
-/* ---------- resume session ---------- */
+/* ---------- resume session / open a shared room link ---------- */
 (function resume(){
   const sess = JSON.parse(localStorage.getItem("nocap_session") || "null");
-  if (!sess || !sess.code) { startRoomsBrowser(); return; } // no game to resume — browse public rooms
-  connect(() => send({ type:"rejoin", code: sess.code, youId: sess.youId }));
+  if (sess && sess.code) { connect(() => send({ type:"rejoin", code: sess.code, youId: sess.youId })); return; }
+  startRoomsBrowser(); // no game to resume — browse public rooms
+
+  // Shared invite link: online.html?room=ABCD → jump straight to that room.
+  const roomParam = new URLSearchParams(location.search).get("room");
+  if (roomParam && /^[A-Za-z0-9]{4}$/.test(roomParam)) {
+    const code = roomParam.toUpperCase();
+    $("#mJoin").click();               // switch to join mode + reveal the code box
+    $("#codeIn").value = code;
+    if ($("#nameIn").value.trim()) { S.mode="join"; setTimeout(()=>$("#goBtn").click(), 250); } // have a name → auto-join
+    else { toast(`Type your name to join room ${code}`); setTimeout(()=>$("#nameIn").focus(), 150); }
+    try { history.replaceState(null, "", location.pathname); } catch(e){}   // clean URL so refresh won't re-fire
+  }
 })();
 </script>
 </body>

@@ -54,6 +54,7 @@ function makeRoom(hostId) {
     code: (() => { let c; do { c = newCode(); } while (rooms.has(c)); return c; })(),
     hostId,
     status: "lobby",
+    isPublic: false,     // private by default; only public rooms show in the browser
     createdAt: now(),
     settings: {
       categories: CATEGORIES.map(c => c.id),
@@ -352,9 +353,10 @@ const httpServer = http.createServer((req, res) => {
   // isn't sensitive — CORS is open to keep working from a standalone-opened file.
   if (urlPath === "/rooms") {
     const open = [...rooms.values()]
-      .filter(r => r.status === "lobby")
+      .filter(r => r.isPublic && (r.status === "lobby" || r.status === "playing" || r.status === "voting"))
       .map(r => {
         const conn = [...r.players.values()].filter(p => p.connected);
+        const joinable = r.status === "lobby" && conn.length < MAX_PLAYERS;
         return {
           code: r.code,
           hostName: (r.players.get(r.hostId) || {}).name || "?",
@@ -364,11 +366,14 @@ const httpServer = http.createServer((req, res) => {
           names: conn.slice(0, 6).map(p => p.name),      // for the avatar row
           cats: r.settings.categories.length,             // for the category chip
           cat1: (CAT_INDEX[r.settings.categories[0]] || {}).name || "Mixed",
-          autoStartAt: r.autoStartAt || null,             // ms, drives "Starts in 0:58"
+          autoStartAt: r.status === "lobby" ? (r.autoStartAt || null) : null,
+          status: r.status,                               // lobby | playing | voting
+          inGame: r.status !== "lobby",                   // show "In game", not joinable
+          joinable,
         };
       })
-      .filter(r => r.players > 0 && r.players < r.maxPlayers)
-      .sort((a, b) => b.players - a.players)
+      .filter(r => r.players > 0)
+      .sort((a, b) => (a.joinable === b.joinable) ? b.players - a.players : (a.joinable ? -1 : 1))
       .slice(0, 30);
     res.writeHead(200, { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*", "Cache-Control": "no-store" });
     return res.end(JSON.stringify(open));
@@ -415,6 +420,7 @@ wss.on("connection", (ws) => {
       const name = String(msg.name || "").trim().slice(0, 14) || "Player";
       pid = uid();
       const room = makeRoom(pid);
+      room.isPublic = !!msg.public;   // "Create public room" lists it in the browser
       room.players.set(pid, { id: pid, name, ws, connected: true });
       rooms.set(room.code, room);
       roomCode = room.code;

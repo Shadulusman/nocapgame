@@ -97,34 +97,49 @@ the word and hiding it in CSS.**
 ### State machine
 
 ```
-lobby → playing → voting → results → (again → playing | backToLobby → lobby)
+lobby → [ playing → voting ]* → results → (again → playing | backToLobby → lobby)
 ```
+
+**Game loop (vote every round, elimination):** a game is ONE `room.round` that
+spans many rounds. Each round = one clue pass (every alive player types one word,
+`skipUnavailableTurns` skips dead/disconnected) → a **vote phase**. In the vote
+phase everyone alive votes; `resolveVote` adds those votes to the cumulative
+`round.tally`, then eliminates every alive player whose total ≥ `voteThreshold`
+(a MAJORITY of the still-alive: `floor(alive/2)+1`, recomputed as people die).
+Win check: **civilians win** when all imposters are eliminated; **imposters win**
+when `aliveImposters >= aliveCivilians`; otherwise `roundNo++` and a new clue
+pass starts (the tally carries over). `endGame` builds the reveal. Key round
+fields: `imposterIds`, `order`, `dead` (Set), `tally` (Map, cumulative),
+`roundNo`, `deaths`. Votes are cast on ALIVE players only; the dead spectate.
 
 Room state lives in an in-memory `Map`. Rooms are deleted 60s after the last
 player disconnects.
 
 **Lobby auto-start:** any lobby with 3+ connected players starts a
 `LOBBY_SECONDS` (60s) countdown (`refreshAutoStart` → `room.autoStartTimer` /
-`room.autoStartAt`). At zero it calls `startRound` on its own; the host can start
-early. Dropping below 3 cancels it. `startRound` always `cancelAutoStart`s so a
-stale timer can't fire into a running game. Sanitized state exposes `autoStartAt`
-(ms) in the lobby so clients render "Starts in 0:58"; `/rooms` exposes it too.
-There is no public/private room distinction — every lobby is listed and eligible.
+`room.autoStartAt`). At zero it calls `startRound`; the host can start early;
+dropping below 3 cancels it. `startRound` always `cancelAutoStart`s.
+
+**Public vs private rooms:** `create` takes `{public}`. Private (default) rooms
+are code-join only and hidden from `/rooms`. Public rooms ("Create a public
+room") appear in the browser; in-progress public rooms are listed too but flagged
+`inGame`/`joinable:false` (client shows a blinking "In game" badge, not a Join).
 
 ### WebSocket protocol
 
 Client → server:
 | type | who | payload |
 |---|---|---|
-| `create` | anyone | `{name}` |
+| `create` | anyone | `{name, public}` — `public:true` = listed in the browser |
 | `join` | anyone | `{code, name}` |
 | `rejoin` | anyone | `{code, youId}` — auto-reconnect |
 | `settings` | host, lobby only | `{settings:{...}}` |
 | `start` | host, lobby, 3+ players | — |
-| `clue` | current turn only | `{words:[...]}` |
-| `vote` | anyone, voting phase | `{targetId}` |
+| `clue` | current turn, alive only | `{words:[...]}` |
+| `vote` | alive players, voting phase | `{targetId}` — must be an alive player |
 | `chat` | anyone, if `settings.chat` on | `{text}` — lobby/playing/voting; trimmed to 160, ~350ms/msg rate limit |
-| `forceReveal` | host, voting | — |
+| `kick` | host | `{targetId}` — removes a player, drops them from a running game |
+| `forceReveal` | host, voting | — (resolve this round's vote now) |
 | `again` | host, results | — |
 | `backToLobby` | host | — |
 
@@ -132,7 +147,10 @@ Server → client:
 - `joined` `{code, youId}` — once on connect
 - `state` `{...}` — full sanitized snapshot, broadcast on every change. Always
   carries `chat` (last 50 msgs, or `[]` when the host disabled chat) and, in the
-  lobby, `autoStartAt`.
+  lobby, `autoStartAt`. In play/vote the round carries `order[]` (with per-player
+  `dead`/`votes`/`connected`), `roundNo`, `threshold`, `yourAlive`.
+- `kicked` — sent to a removed player just before their socket is closed; the
+  client clears its session (so it won't auto-rejoin) and returns to entry.
 - `error` `{message}` — toast on client
 
 **Design note:** the server broadcasts a full state snapshot rather than diffs.
@@ -142,14 +160,15 @@ Don't switch to diffs without a reason.
 ### HTTP endpoints (besides static files)
 
 - `GET /health` → `200 "ok"`
-- `GET /rooms` → JSON array of open (lobby-status, not full) rooms:
-  `[{code, hostName, players, maxPlayers, imposters, names[], autoStartAt}, ...]`,
-  capped at 30, fullest first. Powers the **Public Rooms** browser on the entry
-  screen — the client renders host avatar, player bubbles (`names`), an imposter
-  chip, and a status derived from `players`/`autoStartAt` ("Needs N more" /
-  "Starts in 0:58" / "Ready to start"), ticking every second. Anyone can tap to
-  join without a code; code-join still works. Room codes are already meant to be
-  shareable so this isn't sensitive data; response has `Access-Control-Allow-Origin: *`
+- `GET /rooms` → JSON array of **public** rooms (private rooms never appear):
+  `[{code, hostName, players, maxPlayers, imposters, names[], cats, cat1,
+  autoStartAt, status, inGame, joinable}, ...]`, capped at 30, joinable first.
+  Includes lobby rooms (joinable) AND in-progress public rooms (`inGame:true`,
+  `joinable:false` → the client shows a blinking "In game" badge and blocks the
+  tap). Powers the **Public Rooms** browser — host avatar, player bubbles
+  (`names`), category + imposter chips, and a status ("Needs N more" / "Starts in
+  0:58" / "Ready to start" / "In game"), ticking every second. Room codes are
+  meant to be shareable so this isn't sensitive; response has `Access-Control-Allow-Origin: *`
   and `Cache-Control: no-store`. **The `no-store` + the explicit bypass in
   `sw.js`'s fetch handler both matter** — this is live data, and the service
   worker's cache-first strategy (meant for static assets) would otherwise freeze
@@ -158,12 +177,14 @@ Don't switch to diffs without a reason.
 
 ### Server-side guards (all tested — keep them)
 
-- Non-host cannot change settings or start
-- Out-of-turn `clue` rejected
+- Non-host cannot change settings, start, or `kick`
+- Out-of-turn or dead-player `clue` rejected (`isAvailable` guard)
+- `vote` accepted only from alive players, and only for an alive target
+- `kick` is host-only and can't target self; kicked player is `dead`-marked +
+  socket-closed; they get a `kicked` message so they don't auto-rejoin
 - `start` blocked under 3 players
-- Clue words trimmed to 22 chars, capped at 1 per turn (one word, one player, one turn)
-- `imposters` clamped 1–2 and to `players-2`; `rounds` 1–3 (rounds = how many times the
-  turn order cycles, one word per player per cycle)
+- Clue words trimmed to 22 chars, capped at 1 per turn
+- `imposters` clamped 1–2 and to `players-2`
 - `chat` messages dropped unless `settings.chat` is on; trimmed to 160 chars,
   whitespace-collapsed, ~350ms per-player rate limit, only in lobby/playing/voting
 - Path traversal blocked in static handler
@@ -171,7 +192,7 @@ Don't switch to diffs without a reason.
 ### Disconnect handling
 
 - Host leaves → host migrates to next connected player
-- Player drops on their turn → turn skips (`skipDisconnectedTurns`)
+- Player drops on their turn → turn skips (`skipUnavailableTurns`)
 - Vote tallies against **connected** players only, so one closed tab can't freeze a round
 - Reconnect: client stores `{code, youId}` in localStorage, sends `rejoin`, backs off up to 8s
 - **Stale-close guard**: on `rejoin`, `server.js` swaps `p.ws` to the new socket. The
@@ -185,25 +206,19 @@ Don't switch to diffs without a reason.
 
 ### Game rules
 
-Civilians share a secret word; imposter(s) don't. Players take turns typing
-**one clue word at a time**, visible live to everyone, cycling through the same
-turn order for `rounds` (1–3) passes. The client renders the full turn order as
-a strip of avatars (`turnOrderHtml` in `online.html`) so it's visible who has
-gone, whose turn it is, and who's next — this used to be implicit and confusing
-when a turn let you submit several words in one burst; it's one word per turn now.
-The clue feed (`feedGridHtml`) groups by *person* — one row per player, their
-words laid out alongside each other in round order — rather than one row per
-clue stacked chronologically, so you can actually scan "what did X say" instead
-of hunting through an interleaved list.
+Civilians share a secret word; imposter(s) don't. Each **round**, players take
+turns typing **one clue word** (one per player, alive players only), then everyone
+votes — see the "Game loop" under the state machine for the full elimination /
+win-condition mechanic. The play screen (`playFeedHtml`) shows a per-player status
+row (their clue / "…" typing / "Up next" / "Killed"); the vote screen shows each
+player's clue, a running cumulative-vote badge, and Vote/Voted buttons; results
+shows a coloured win/lose card + the reveal (role + Dead tags).
 
-After the last pass, voting starts and **auto-resolves after `VOTE_SECONDS`
-(30s, overridable via env var for tests)** even if not everyone has voted —
-`scheduleVoteTimeout` in `server.js`. The timer lives on the round object, not
-the room, so a stale timeout from an earlier round can't tally the wrong round
-after `again` starts a fresh one (checks `room.round === r` before acting).
-Group wins by voting out an imposter. **A tie means nobody is voted out and the
-imposter wins** (`tallyAndFinish`, which also clears the vote timer — every
-path that resolves voting goes through it, so the timer never double-fires).
+Each vote phase **auto-resolves after `VOTE_SECONDS` (30s, overridable via env
+var for tests)** even if not everyone voted — `scheduleVoteTimeout`. The timer
+lives on the round object; every resolution path (`resolveVote`, `endGame`)
+clears it, and callbacks check `room.round === r` so a stale timeout can't act on
+a fresh game after `again`.
 
 Turn order is **reshuffled every round** (`order` in `startRound`, via the
 Fisher-Yates `shuffle()` helper — not `sort(() => Math.random() - .5)`, which
@@ -246,6 +261,16 @@ snapshot — no separate socket channel.
 **Mode-selector cards** ("Pass the phone" / "Play online") sit at the top of both
 entry screens and just cross-link the two self-contained files (index ⇄ online) —
 they do NOT merge them. The selected card is styled `.mode-card.sel`.
+
+**Invite links (deep-link):** Share builds `online.html?room=CODE`. On load the
+`resume()` IIFE parses `?room=`, switches to join mode + prefills the code, and
+auto-joins if a name is already saved (else focuses the name field). It clears the
+query with `history.replaceState` so a refresh won't re-fire. An existing saved
+session takes priority over the link.
+
+**Note:** `pass-and-play` (`index.html`) still uses the OLDER single-round rules —
+the vote-every-round elimination rework is **online only** so far. If you touch
+game rules, remember the two are now different.
 
 ---
 
