@@ -1,7 +1,7 @@
 {
-  "name": "bhedi-server",
+  "name": "nocap-server",
   "version": "1.0.0",
-  "description": "Realtime game server for Bhedi — find the imposter",
+  "description": "Realtime game server for NOCAP — online imposter game",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

@@ -1,5 +1,5 @@
 /* =========================================================
-   BHEDI · realtime game server (server-authoritative)
+   NOCAP · realtime game server (server-authoritative)
    Node + ws. Deploy anywhere that runs Node (Render, Railway,
    Fly, Glitch) or run locally with:  npm install && npm start
    ========================================================= */
@@ -7,6 +7,7 @@ const { WebSocketServer } = require("ws");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const zlib = require("zlib");
 const PORT = process.env.PORT || 8787;
 // Hosts (Render/Railway/Fly) need 0.0.0.0. Use HOST=127.0.0.1 for local tests.
 const HOST = process.env.HOST || "0.0.0.0";
@@ -279,6 +280,15 @@ const MIME = {
   ".png":"image/png", ".svg":"image/svg+xml", ".ico":"image/x-icon",
   ".webmanifest":"application/manifest+json",
 };
+// gzip these text types (the HTML files are ~60–80KB → ~15KB gzipped). PNGs are
+// already compressed, so we never re-gzip them.
+const COMPRESSIBLE = new Set([".html", ".js", ".css", ".json", ".svg", ".webmanifest"]);
+function cacheHeader(ext, urlPath) {
+  if (ext === ".png" || ext === ".ico") return "public, max-age=604800";  // icons — a week
+  if (urlPath === "/manifest.json") return "public, max-age=86400";       // a day
+  if (urlPath === "/sw.js") return "no-cache";  // let the browser detect SW updates
+  return "no-cache";                            // HTML — revalidate so edits show up
+}
 const ROOT = __dirname;
 const httpServer = http.createServer((req, res) => {
   let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
@@ -314,13 +324,28 @@ const httpServer = http.createServer((req, res) => {
   fs.readFile(filePath, (err, data) => {
     if (err) { res.writeHead(404, {"Content-Type":"text/plain"}); return res.end("Not found"); }
     const ext = path.extname(filePath).toLowerCase();
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
-    res.end(data);
+    const headers = {
+      "Content-Type": MIME[ext] || "application/octet-stream",
+      "Cache-Control": cacheHeader(ext, urlPath),
+    };
+    const acceptsGzip = /\bgzip\b/.test(req.headers["accept-encoding"] || "");
+    if (acceptsGzip && COMPRESSIBLE.has(ext)) {
+      zlib.gzip(data, (gzErr, gz) => {
+        if (gzErr) { res.writeHead(200, headers); return res.end(data); }
+        headers["Content-Encoding"] = "gzip";
+        headers["Vary"] = "Accept-Encoding";
+        res.writeHead(200, headers);
+        res.end(gz);
+      });
+    } else {
+      res.writeHead(200, headers);
+      res.end(data);
+    }
   });
 });
 const wss = new WebSocketServer({ server: httpServer });
 httpServer.listen(PORT, HOST);
-console.log(`Bhedi server listening on ${HOST}:${PORT}`);
+console.log(`NOCAP server listening on ${HOST}:${PORT}`);
 
 wss.on("connection", (ws) => {
   ws.isAlive = true;

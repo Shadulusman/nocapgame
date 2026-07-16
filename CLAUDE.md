@@ -1,9 +1,11 @@
-# Bhedi — project context for Claude Code
+# NOCAP — project context for Claude Code
 
-Social-deduction party game ("find the imposter") aimed at an Indian audience.
-Installable PWA + realtime multiplayer. Two modes share one design system.
+Social-deduction party game ("find the imposter"). Installable PWA + realtime
+multiplayer. Two modes share one design system.
 
-**Name:** *Bhedi* — from "ghar ka bhedi Lanka dhaaye" (the insider who leaks the secret).
+**Name:** *NOCAP* — "online imposter game" (slang: "no cap" = no lie). Rebranded
+from an earlier name, *Bhedi*; user-facing copy calls the hidden role the
+**imposter**. If you see leftover "bhedi" anywhere, it's a stray — replace it.
 
 ---
 
@@ -13,14 +15,18 @@ Installable PWA + realtime multiplayer. Two modes share one design system.
 |---|---|
 | Pass-and-play mode | Done, tested |
 | Online multiplayer | Done, tested (see "Test it" — all 4 suites must pass) |
-| Deploy | Pushed to GitHub (`Shadulusman/bhedi`). Render deploy is a manual step the owner does via the dashboard. |
+| Deploy | Pushed to GitHub (`Shadulusman/bhedi`, the repo is still named `bhedi`). Render deploy is a manual dashboard step. |
 | Scoring across rounds | Not built |
 | Profanity filter / rate limiting | Not built |
 
-**Repo is pushed to GitHub** (`Shadulusman/bhedi`, `main`). Render deploy
-(Build: `npm install`, Start: `node server.js`, Free tier) is a manual dashboard
-step the owner does themselves — walk them through the clicks, don't attempt it
-via CLI.
+**Repo is pushed to GitHub** (`Shadulusman/bhedi`, `main`) — repo not renamed.
+The intended **play URL is `nocapgame.onrender.com`**, which comes from the
+Render *service* name (rename the service in Render → Settings, or create it as
+`nocapgame`), NOT from the repo name. Render deploy (Build: `npm install`, Start:
+`node server.js`, Free tier) is a manual dashboard step the owner does themselves
+— walk them through the clicks, don't attempt it via CLI. A `keep-warm` GitHub
+Action pings `/health` every 10 min (needs a `RENDER_URL` repo variable) so the
+free instance doesn't cold-start.
 
 The owner is a beginner with git/Node. Prefer concrete commands over explanation,
 and **never put `#` comments inside a paste block** — zsh executes them as
@@ -245,42 +251,46 @@ they do NOT merge them. The selected card is styled `.mode-card.sel`.
 
 ## Design system
 
-**Neon-blue "arcade" theme** on a dark canvas (this replaced a short-lived light
-theme; the owner wanted a distinct game vibe, not the generic look). Electric
-cyan + glow everywhere, faint background grid, glowing display type.
+**Light "esports" theme — red / white / blue**, pulled from the NOCAP logo. Clean
+white surfaces, bold red primary, blue for the civilian role, squared game type.
 
-- Background: near-black navy `#070A16` (`--ink`) with cyan/pink/violet radial
-  glows and a faint 46px cyan grid. Cards (`--surface` `#111834`) are dark with
-  neon borders/shadows.
-- Two-role color language: **electric cyan** `#35D6FF` = civilian; **neon pink-red**
-  `#FF3D6E` (`--crimson`) = imposter. Accent as a *fill* uses dark text
-  (`#04121F`); accent as *text on dark* uses the BRIGHT `--gold-ink` `#7FE4FF`
-  (not `--gold-deep`, which is the darker gradient/border cyan). Glow is done with
-  `text-shadow`/`box-shadow`/`filter:drop-shadow` in cyan or pink rgba.
-- **Token names are inherited, not accurate:** `--gold*` are cyan now, `--crimson*`
-  are neon pink-red, `--cream` (`#E9EEFF`) is the near-white primary text, and
-  `--ink*`/`--surface*` are dark. They kept the old names so the hundreds of
+- Background: near-white `#F5F7FB` (`--ink`) with faint red + blue radial tints
+  and a barely-there dark grid. Cards (`--surface` `#FFFFFF`) sit on it with soft
+  shadows (no glow — glow is a dark-theme thing, don't add it here).
+- Role / brand colors:
+  - **Brand + primary + imposter = RED** `#E11D2A` — this is the `--gold*` token
+    set (buttons, generic accents, and the imposter role/`--crimson*`, all red).
+  - **Civilian = BLUE** `#1E7FE0` — the `--blue*` tokens. Only the civilian-role
+    selectors use blue (`.card.civ*`, `.secret.civ*`, `.role.r-civ`); everything
+    else "accent" is red.
+  - Accent as a *fill* uses **white** text (`#FFFFFF`); accent as *text on white*
+    uses the readable `--gold-ink` `#C4141F` (red) or `--blue-ink` `#1568C4` (blue).
+- **Token names are inherited, not accurate:** `--gold*` = brand RED, `--crimson*`
+  = imposter red, `--blue*` = civilian blue, `--cream` (`#16181F`) = dark primary
+  text, `--ink*`/`--surface*` = light. Kept the old names so the hundreds of
   `var(--…)` usages across the two duplicated files didn't need renaming. To
   re-theme, remap the `:root` block in **both** `index.html` and `online.html`,
-  the `<meta name="theme-color">`, and `manifest.json` — plus the handful of
-  hardcoded literals (`fill="#35D6FF"` logo, flip-card gradients, avatar `AV`
-  palette, `#04121F` accent-text). The bulk tints are `rgba(53,214,255,…)` (cyan),
-  `rgba(255,61,110,…)` (pink), `rgba(43,227,138,…)` (green).
+  the `<meta name="theme-color">`, and `manifest.json` — plus the hardcoded
+  literals: `fill="#E11D2A"` logo mask, flip-card light gradients, the avatar `AV`
+  palette (medium-saturation, white-text-friendly), and `#FFFFFF` accent-text. The
+  bulk tints are `rgba(225,29,42,…)` (red), `rgba(30,127,224,…)` (blue),
+  `rgba(43,227,138,…)` (green).
 - ⚠️ **Comment trap:** never write `*/` inside a CSS comment (e.g. describing
   `var(--gold-*/-something)`). It closes the comment early and silently corrupts
-  the next declarations — this exact bug made `--ink` resolve to empty and the
-  whole background render white. Bit us once; the "neon accents" block and `:root`
-  comment are written to avoid it.
-- Type: **Orbitron** (display/headings/buttons — the game look) / **Rajdhani**
+  the next declarations — this bug once made `--ink` resolve to empty and the
+  whole background render white. The `:root` comment is written to avoid it.
+- **Logo:** the header shows an `<img class="brand-logo" src="icons/nocap-logo.png">`
+  with `onerror` that hides it and falls back to the `.brand-txt` "NOCAP" wordmark.
+  The user supplies the PNG; it may 404 in dev (harmless).
+- Type: **Orbitron** (display/headings/buttons — the esports look) / **Rajdhani**
   (body/UI, runs light so body is `font-weight:500`) / **Share Tech Mono** (codes,
   timers, labels).
-- Signature element: the flip card. Civ face = dark with a cyan-glowing word +
-  cyan border glow; imp face = dark with a pink-glowing "IMPOSTER". That's where
-  the boldest glow lives.
-- Toasts are a dark surface with a cyan glow border.
+- Signature element: the flip card. Civ face = light with a blue word + blue
+  border; imp face = light with a red "IMPOSTER".
+- Toasts are a dark pill (`#17181F`) for contrast on the light UI.
 - Mobile-first, safe-area aware, `prefers-reduced-motion` respected.
-- `livetest.py` asserts `body` computes to `rgb(7, 10, 22)` — update it if the
-  background token changes.
+- `livetest.py` asserts `body` computes to `rgb(245, 247, 251)` and the `.brand-txt`
+  says "nocap" — update them if those change.
 
 ---
 

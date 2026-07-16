@@ -27,7 +27,7 @@ try:
             # an unrelated word, e.g. a code comment coincidentally matching the
             # round's random secret word).
             pg.on("websocket", lambda ws, frames=frames: ws.on("framereceived", lambda payload, frames=frames: frames.append(payload)))
-            pg.add_init_script("localStorage.setItem('bhedi_server','ws://127.0.0.1:8821')")
+            pg.add_init_script("localStorage.setItem('nocap_server','ws://127.0.0.1:8821')")
             pg.goto(BASE); pg.wait_for_timeout(600)
             ctxs.append(c); pages.append(pg)
 

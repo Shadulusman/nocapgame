@@ -22,11 +22,11 @@ try:
         host.goto(BASE + "/online.html"); host.wait_for_timeout(900)
         detected = host.evaluate("() => SERVER_URL")
         ok(f"auto-detected server url = {detected}", detected == "ws://127.0.0.1:8833")
-        ok("CSS applied (served over http)", host.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(7, 10, 22)")
+        ok("CSS applied (served over http)", host.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(245, 247, 251)")
 
         # root serves pass-and-play
         p2.goto(BASE + "/"); p2.wait_for_timeout(700)
-        ok("/ serves pass-and-play app", "bhedi" in p2.inner_text(".wordmark").lower())
+        ok("/ serves pass-and-play app", "nocap" in p2.inner_text(".brand-txt").lower())
         # icons + manifest reachable
         r_icon = p2.evaluate("async()=>{const r=await fetch('/icons/icon-192.png');return r.status;}")
         r_man  = p2.evaluate("async()=>{const r=await fetch('/manifest.json');return r.status;}")

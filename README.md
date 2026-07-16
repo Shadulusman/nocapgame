@@ -1,4 +1,4 @@
-# Bhedi — how to put it live
+# NOCAP — how to put it live
 
 You need **one** deploy. The server hosts the game *and* the website, and the app
 figures out its own address. There is no URL to edit and nothing to configure.
@@ -18,7 +18,7 @@ You'll put your files on GitHub (a file locker), then point Render at them.
 
 1. Go to **github.com** -> **Sign up** (free).
 2. Once logged in, click the **+** (top right) -> **New repository**.
-3. Name it `bhedi`. Leave it **Public**. Click **Create repository**.
+3. Name it `nocapgame`. Leave it **Public**. Click **Create repository**.
 4. On the next page, click the link **"uploading an existing file"**.
 5. Drag in **all of these**:
    - `index.html`
@@ -38,19 +38,19 @@ You'll put your files on GitHub (a file locker), then point Render at them.
 
 1. Go to **render.com** -> **Get Started** -> **Sign in with GitHub**.
 2. Click **New +** -> **Web Service**.
-3. Find your `bhedi` repo -> **Connect**.
+3. Find your `nocapgame` repo -> **Connect**.
 4. Fill in:
    - **Language / Runtime:** `Node`
    - **Build Command:** `npm install`
    - **Start Command:** `node server.js`
    - **Instance Type:** `Free`
 5. Click **Create Web Service**. Wait ~2 minutes for it to build.
-6. At the top you'll get your address, like `https://bhedi.onrender.com`.
+6. At the top you'll get your address, like `https://nocapgame.onrender.com`.
 
 **That's it. You're live.**
 
-- Pass-and-play: `https://bhedi.onrender.com`
-- Online multiplayer: `https://bhedi.onrender.com/online.html`
+- Pass-and-play: `https://nocapgame.onrender.com`
+- Online multiplayer: `https://nocapgame.onrender.com/online.html`
 
 Don't touch the PORT setting - Render handles it.
 
@@ -65,6 +65,18 @@ Don't touch the PORT setting - Render handles it.
 
 **Install it like a real app:** open the link in Safari -> Share button ->
 **Add to Home Screen**.
+
+---
+
+## Add your logo
+
+The app looks for your logo at **`icons/nocap-logo.png`**. Save the NOCAP logo
+image there (a square PNG works best). Until you do, the header just shows the
+word **NOCAP** as text — nothing breaks.
+
+For the phone home-screen icon (when installed), also replace the square
+`icons/icon-192.png` and `icons/icon-512.png` with your logo at those pixel
+sizes. Any free image resizer will do it.
 
 ---
 
@@ -125,12 +137,12 @@ peek at the answer by opening their browser's dev tools.
 1. Pick a mode: **Pass the phone** (one screen) or **Play online** (each on their
    own phone). Online: host makes a room and shares the 4-letter code — or a
    friend taps it from the **Public Rooms** list, no code needed.
-2. Everyone taps their card. Civilians see the secret word; the bhedi doesn't.
+2. Everyone taps their card. Civilians see the secret word; the imposter doesn't.
 3. Players take turns typing one clue word each. Everyone sees them appear live,
    grouped by person so it's easy to follow who said what.
 4. After the set number of turns, everyone votes. Voting auto-resolves after
    30 seconds even if someone's still deciding.
-5. Group wins by voting out the bhedi. **A tie means nobody goes out - the bhedi survives.**
+5. Group wins by voting out the imposter. **A tie means nobody goes out - the imposter survives.**
 
 A public room with 3+ players **auto-starts after a 60-second countdown** (the
 host can start early). Players can **chat** in the lobby and during the game —
