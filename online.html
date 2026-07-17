@@ -979,12 +979,15 @@ const anim = {
       onComplete(){ wrap.classList.remove("show"); } });
     buzz(go ? [40,30,90] : 20); tone(go ? 880 : 520 + n*70, .12, "triangle", .16);
   },
-  // Role card: pop the whole card + kick the word.
+  // Role card: pop the deck + kick the word. NEVER animate the card's own
+  // transform — the flip lives on .card.flipped { transform: rotateY(180deg) },
+  // and an inline GSAP transform there would cancel the flip (card never reveals).
   roleReveal(card){
     if (!G || reduceMotion) return;
-    G.fromTo(card, { scale: 0.9 }, { scale: 1, duration: 0.5, ease: "elastic.out(1,0.55)" });
+    const deck = (card.closest && card.closest(".deck")) || card.parentElement;
+    if (deck) G.fromTo(deck, { scale: 0.9 }, { scale: 1, duration: 0.5, ease: "elastic.out(1,0.55)", clearProps: "transform" });
     const word = $(".the-word", card);
-    if (word) G.fromTo(word, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.1, ease: "back.out(3)" });
+    if (word) G.fromTo(word, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.2, ease: "back.out(3)", clearProps: "transform,opacity" });
   },
   // Result card entrance; bounce for a win, a heavier drop for a loss.
   winner(card, won){
