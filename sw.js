@@ -1,8 +1,9 @@
-const CACHE = "nocap-v9";
+const CACHE = "nocap-v10";
 const ASSETS = [
   "./",
   "./index.html",
   "./online.html",
+  "./gsap.min.js",
   "./manifest.json",
   "./icons/nocap-logo.png",
   "./icons/icon-192.png",

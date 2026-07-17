@@ -442,6 +442,23 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .chatbar .cb-chev svg{width:20px;height:20px;}
 body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe area */
 
+/* ---- FX overlays (GSAP) ---- */
+.fx-count{position:fixed;inset:0;z-index:80;display:grid;place-items:center;pointer-events:none;opacity:0;visibility:hidden;
+  background:radial-gradient(circle at center, rgba(20,24,40,.28), rgba(20,24,40,.05) 60%, transparent 75%);}
+.fx-count.show{visibility:visible;opacity:1;}
+.fx-count-n{font-family:var(--ff-disp);font-weight:900;font-size:34vw;line-height:1;color:var(--gold);
+  text-shadow:0 12px 40px rgba(225,29,42,.45);-webkit-text-stroke:2px #fff;}
+.fx-count-n.go{font-size:22vw;-webkit-text-stroke:2px #fff;color:var(--blue);text-shadow:0 12px 40px rgba(30,127,224,.45);}
+.fx-confetti{position:fixed;inset:0;z-index:78;pointer-events:none;overflow:hidden;}
+.fx-confetti i{position:absolute;top:-20px;width:10px;height:14px;border-radius:2px;will-change:transform,opacity;}
+/* XP badge on the result card */
+.xp-badge{margin-top:14px;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);backdrop-filter:blur(2px);}
+.xp-gain{font-family:var(--ff-disp);font-weight:900;font-size:26px;color:#fff;letter-spacing:.02em;}
+.xp-total{font-family:var(--ff-body);font-weight:700;font-size:12.5px;color:rgba(255,255,255,.85);margin-top:2px;}
+.xp-total b{color:#fff;}
+.xp-bar{margin-top:8px;height:8px;border-radius:100px;background:rgba(255,255,255,.22);overflow:hidden;}
+.xp-bar span{display:block;height:100%;width:0;border-radius:100px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.6);}
+
 /* ---- lobby auto-start banner ---- */
 .auto-banner{display:flex;align-items:center;justify-content:center;gap:9px;margin:14px 0 2px;padding:12px;border-radius:var(--r-md);
   background:linear-gradient(180deg,rgba(225,29,42,.14),rgba(225,29,42,.04));border:1px solid rgba(225,29,42,.45);
@@ -839,6 +856,11 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
         <div class="rc-kick">Game over</div>
         <div class="verdict" id="oVerdict">—</div>
         <p class="rc-sub" id="oSub">—</p>
+        <div class="xp-badge" id="xpBadge">
+          <div class="xp-gain"><span id="xpGain">+0</span> XP</div>
+          <div class="xp-total">Total <b id="xpTotal">0</b> XP · Level <b id="xpLevel">1</b></div>
+          <div class="xp-bar"><span id="xpBarFill"></span></div>
+        </div>
       </div>
       <div class="word-reveal">
         <div class="l">The secret word was</div>
@@ -870,6 +892,10 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 <div class="conn" id="conn">Reconnecting…</div>
 <div class="toast" id="toast"></div>
 
+<!-- ===== FX overlays (GSAP-driven) ===== -->
+<div class="fx-confetti" id="fxConfetti" aria-hidden="true"></div>
+<div class="fx-count" id="fxCount" aria-hidden="true"><span class="fx-count-n" id="fxCountN">3</span></div>
+
 <!-- ===== PUSH-TO-TALK (in-game, bottom-right) ===== -->
 <button class="ptt hidden" id="pttBtn" title="Hold to talk">
   <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
@@ -894,6 +920,8 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
   </div>
 </div>
 
+<!-- animation engine (self-hosted, cached by the service worker) -->
+<script src="./gsap.min.js"></script>
 <script>
 /* =========================================================
    NOCAP · online client
@@ -928,6 +956,94 @@ const sfx = {
   win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.16,"triangle",.15),i*90)); },
   lose(){ [392,330,262].forEach((f,i)=>setTimeout(()=>tone(f,.2,"sawtooth",.13),i*130)); },
 };
+
+/* =========================================================
+   ANIMATIONS (GSAP) — every hook is a no-op if gsap failed to load,
+   so the game never breaks on a missing/blocked animation library.
+   ========================================================= */
+const G = window.gsap || null;
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const anim = {
+  // Big 3·2·1 → GO! pop before the match starts.
+  count(n){
+    if (!G || reduceMotion) return;
+    const wrap = $("#fxCount"), el = $("#fxCountN");
+    const go = n <= 0;
+    el.textContent = go ? "GO!" : String(n);
+    el.classList.toggle("go", go);
+    wrap.classList.add("show");
+    G.killTweensOf(el);
+    G.fromTo(el, { scale: 0.2, opacity: 0, rotate: -12 },
+      { scale: 1, opacity: 1, rotate: 0, duration: 0.28, ease: "back.out(2.4)" });
+    G.to(el, { scale: go ? 1.6 : 1.25, opacity: 0, duration: 0.5, delay: 0.42, ease: "power2.in",
+      onComplete(){ wrap.classList.remove("show"); } });
+    buzz(go ? [40,30,90] : 20); tone(go ? 880 : 520 + n*70, .12, "triangle", .16);
+  },
+  // Role card: pop the whole card + kick the word.
+  roleReveal(card){
+    if (!G || reduceMotion) return;
+    G.fromTo(card, { scale: 0.9 }, { scale: 1, duration: 0.5, ease: "elastic.out(1,0.55)" });
+    const word = $(".the-word", card);
+    if (word) G.fromTo(word, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.1, ease: "back.out(3)" });
+  },
+  // Result card entrance; bounce for a win, a heavier drop for a loss.
+  winner(card, won){
+    if (!G || reduceMotion) { return; }
+    G.fromTo(card, { scale: 0.7, y: 24, opacity: 0 },
+      { scale: 1, y: 0, opacity: 1, duration: won ? 0.7 : 0.5, ease: won ? "elastic.out(1,0.6)" : "power3.out" });
+  },
+  // Count a number element up from → to over ~1s.
+  countUp(el, from, to, suffix){
+    if (!el) return;
+    const set = v => el.textContent = (suffix||"") + Math.round(v).toLocaleString();
+    if (!G || reduceMotion) { set(to); return; }
+    const o = { v: from }; set(from);
+    G.to(o, { v: to, duration: 1.1, ease: "power2.out", onUpdate(){ set(o.v); } });
+  },
+  bar(el, pct){
+    if (!el) return;
+    if (!G || reduceMotion) { el.style.width = pct + "%"; return; }
+    G.fromTo(el, { width: "0%" }, { width: pct + "%", duration: 1.1, ease: "power2.out" });
+  },
+  // Confetti burst from the top; colours default to the brand palette.
+  confetti(colors){
+    if (!G || reduceMotion) return;
+    const box = $("#fxConfetti");
+    colors = colors || ["#E11D2A", "#1E7FE0", "#F5A623", "#12A05C", "#7048E8", "#ffffff"];
+    const N = 90;
+    for (let i = 0; i < N; i++){
+      const bit = document.createElement("i");
+      bit.style.background = colors[i % colors.length];
+      bit.style.left = (Math.random() * 100) + "vw";
+      if (Math.random() < 0.5) bit.style.borderRadius = "50%";
+      box.appendChild(bit);
+      G.fromTo(bit,
+        { y: -20, x: 0, rotate: Math.random()*360, opacity: 1 },
+        { y: (window.innerHeight + 60), x: (Math.random()*260 - 130),
+          rotate: Math.random()*720 - 360, opacity: 1, ease: "power1.in",
+          duration: 1.8 + Math.random()*1.4, delay: Math.random()*0.5,
+          onComplete(){ bit.remove(); } });
+      G.to(bit, { opacity: 0, duration: 0.5, delay: 1.6 + Math.random()*1.2 });
+    }
+  },
+  // Quick screen shake (eliminations, losses).
+  shake(intensity){
+    if (!G || reduceMotion) return;
+    const el = $("#app");
+    G.killTweensOf(el);
+    const k = intensity || 8;
+    G.fromTo(el, { x: -k },
+      { x: 0, duration: 0.6, ease: "elastic.out(1.4,0.25)", clearProps: "x",
+        onStart(){ G.set(el, { x: k }); } });
+  },
+};
+
+/* ---- XP (client-side, persisted locally) ---- */
+const XP_KEY = "nocap_xp";
+const xpLevel = xp => Math.floor(xp / 500) + 1;                 // 500 XP per level
+const xpIntoLevel = xp => xp % 500;
+function loadXP(){ return Math.max(0, parseInt(localStorage.getItem(XP_KEY) || "0", 10) || 0); }
+function awardXP(amount){ const t = loadXP() + amount; localStorage.setItem(XP_KEY, String(t)); return t; }
 
 const S = {
   ws:null, mode:"create", name:"", code:"", youId:null,
@@ -1351,6 +1467,7 @@ $("#roleCard").addEventListener("click", () => {
     front.innerHTML = `<div class="role-tag">The word is</div><div class="the-word">${r.yourWord}</div><div class="word-cat"><b>${r.category}</b></div>`;
   }
   card.classList.add("flipped");
+  anim.roleReveal(card);
   tone(660,.09,"triangle",.16); setTimeout(()=>tone(990,.14,"triangle",.14),70);
   buzz(18);
   setTimeout(()=>$("#roleGo").classList.remove("hidden"), 450);
@@ -1420,12 +1537,15 @@ function render(){
       S.roleSeen = false; S.peeked = true;
       $("#roleCard").classList.remove("flipped","civ","imp");
       $("#roleGo").classList.add("hidden");
+      if (prevStatus === "lobby") anim.count(0);   // "GO!" as the match kicks off
     }
+    // screen shake the moment YOU get eliminated (alive last snapshot → dead now)
+    if (S.prev && S.prev.round && S.prev.round.yourAlive && !s.round.yourAlive) { anim.shake(11); buzz([60,40,120]); }
     if (!S.roleSeen) go("role");
     else if (!$("#s-role").classList.contains("active")) go("play");
   }
   else if (s.status === "voting") { renderVote(); go("ovote"); }
-  else if (s.status === "results") { renderResults(); go("oresults"); }
+  else if (s.status === "results") { renderResults(prevStatus !== "results"); go("oresults"); }
 
   refreshVoiceBtn();   // after the screen + its footer are set, so the mic lifts correctly
 }
@@ -1458,7 +1578,7 @@ function renderLobby(){
   const enoughForTimer = s.players.length >= 3;
   pauseBtn.classList.toggle("hidden", !s.isHost || !enoughForTimer);
   if (s.autoStartPaused && enoughForTimer) {
-    clearInterval(S.lobbyTick);
+    clearInterval(S.lobbyTick); S._countAt = null;
     banner.classList.remove("hidden"); banner.classList.add("paused");
     $("#autoTxt").textContent = "Countdown paused" + (s.isHost ? "" : " by host");
     pauseBtn.textContent = "Resume";
@@ -1469,12 +1589,15 @@ function renderLobby(){
       const left = s.autoStartAt - Date.now();
       if (left <= 0 || !S.state || S.state.status !== "lobby") { clearInterval(S.lobbyTick); return; }
       $("#autoTxt").textContent = `Game starts in ${fmtCountdown(left)}` + (s.isHost ? " · or start now" : "");
+      // big 3·2·1 pop over the last few seconds before the match auto-starts
+      const secs = Math.ceil(left / 1000);
+      if (secs <= 3 && secs >= 1 && S._countAt !== secs) { S._countAt = secs; anim.count(secs); }
     };
     tickBanner();
     clearInterval(S.lobbyTick); S.lobbyTick = setInterval(tickBanner, 250);
   } else {
     banner.classList.add("hidden"); banner.classList.remove("paused");
-    clearInterval(S.lobbyTick);
+    clearInterval(S.lobbyTick); S._countAt = null;
   }
 
   if (s.isHost) {
@@ -1672,7 +1795,7 @@ function renderVote(){
   }
 }
 
-function renderResults(){
+function renderResults(firstTime){
   const s = S.state, res = s.results;
   const civWin = res.winner === "civilians";
   const card = $("#resultCard");
@@ -1681,7 +1804,27 @@ function renderResults(){
   $("#oSub").textContent = civWin
     ? "The imposters were voted out. Good detective work."
     : "The civilians can no longer outvote the imposters.";
-  (civWin ? sfx.win : sfx.lose)(); buzz(civWin ? [40,30,80] : [80,40,80]);
+
+  // did YOU win? (your side matches the winning side)
+  const me = res.players.find(p => p.id === s.youId);
+  const iWon = !!me && ((me.role === "imposter") === (res.winner === "imposters"));
+  const survived = !!me && !me.dead;
+
+  if (firstTime) {
+    (iWon ? sfx.win : sfx.lose)(); buzz(iWon ? [40,30,80] : [80,40,80]);
+    anim.winner(card, iWon);
+    if (iWon) { anim.confetti(civWin ? ["#1E7FE0","#ffffff","#12A05C","#F5A623"] : ["#E11D2A","#ffffff","#7048E8","#F5A623"]); }
+    else { anim.shake(9); }
+    // ---- XP: award once, then count it up ----
+    let gain = 25;                       // showed up
+    if (iWon) gain += 100;               // your side won
+    if (survived) gain += 40;            // still standing
+    const before = loadXP(), after = awardXP(gain);
+    anim.countUp($("#xpGain"), 0, gain, "+");
+    anim.countUp($("#xpTotal"), before, after);
+    $("#xpLevel").textContent = xpLevel(after);
+    anim.bar($("#xpBarFill"), Math.round(xpIntoLevel(after) / 500 * 100));
+  }
 
   $("#oWord").textContent = res.word;
   const list = $("#oList"); list.innerHTML = "";

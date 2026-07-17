@@ -231,7 +231,14 @@ win-condition mechanic. The play screen (`playFeedHtml`) shows a per-player stat
 row (their clue / "…" typing / "Up next" / "Killed"); the vote screen shows each
 player's clue, a **live current-round vote badge** (`order[].votes`, updates in
 real time as people vote), and Vote/Voted buttons; results shows a coloured
-win/lose card + the reveal (role + Dead tags). Chat is a docked bar pinned at the
+win/lose card + the reveal (role + Dead tags). **Animations** use GSAP (self-hosted
+`gsap.min.js`, loaded before the main script, SW-cached) via the `anim` helper — every
+hook no-ops if gsap is missing or `prefers-reduced-motion` is set. Hooks: match
+countdown (3·2·1→GO! `#fxCount` overlay, fired from the lobby auto-start tick), role
+reveal (card pop on flip), winner celebration + `anim.confetti()` (`#fxConfetti`) when
+YOU win, `anim.shake()` on your elimination / a loss, and an XP count-up on the result
+card (`#xpBadge`; client-side XP persisted in `localStorage` `nocap_xp`, 500/level).
+Chat is a docked bar pinned at the
 bottom (`#chatBar`, shows unread badge + last-message preview) that opens the chat
 sheet; when it's visible `body.has-chatbar` reserves space via `--chatbar-h` so
 screens shrink above it. A push-to-talk mic FAB (`#pttBtn`) is centred just above
