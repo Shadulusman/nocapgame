@@ -37,6 +37,11 @@
   --safe-t:env(safe-area-inset-top,0px);
   --safe-b:env(safe-area-inset-bottom,0px);
   --chatbar-h:0px;
+  /* --- one motion language: shared durations + easings --- */
+  --dur-fast:.16s; --dur:.28s; --dur-slow:.5s;
+  --ease-out:cubic-bezier(.2,.7,.2,1);      /* standard settle */
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);/* gentle overshoot for press-release */
+  --ease-in:cubic-bezier(.4,0,1,1);
 }
 body.has-chatbar{--chatbar-h:calc(60px + var(--safe-b));}   /* reserve room for the docked chat bar */
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
@@ -249,7 +254,56 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .rule .b p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.5;}
 
 .hidden{display:none !important;}
-@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;}}
+
+/* ==========================================================
+   PREMIUM MOTION LAYER — one motion language across the app.
+   Everything here is transform/opacity only (GPU) and is fully
+   disabled under prefers-reduced-motion (see the query below).
+   ========================================================== */
+#app{z-index:1;}
+/* animated background: three slow-drifting, blurred colour blobs */
+.bg-fx{position:fixed;inset:-10%;z-index:0;pointer-events:none;overflow:hidden;filter:blur(60px);opacity:.55;}
+.bg-fx span{position:absolute;width:52vw;height:52vw;max-width:460px;max-height:460px;border-radius:50%;will-change:transform;}
+.bg-fx span:nth-child(1){left:-8vw;top:-6vh;background:radial-gradient(circle,rgba(225,29,42,.5),transparent 70%);animation:blob1 22s ease-in-out infinite;}
+.bg-fx span:nth-child(2){right:-10vw;top:32vh;background:radial-gradient(circle,rgba(30,127,224,.42),transparent 70%);animation:blob2 27s ease-in-out infinite;}
+.bg-fx span:nth-child(3){left:18vw;bottom:-14vh;background:radial-gradient(circle,rgba(112,72,232,.32),transparent 70%);animation:blob3 31s ease-in-out infinite;}
+@keyframes blob1{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(6vw,4vh,0) scale(1.12);}}
+@keyframes blob2{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(-5vw,-5vh,0) scale(1.15);}}
+@keyframes blob3{0%,100%{transform:translate3d(0,0,0) scale(1);}50%{transform:translate3d(4vw,-3vh,0) scale(.9);}}
+
+/* premium buttons: spring press, hover lift + glow, animated focus ring, ripple */
+.cta,.iconbtn,.mode-btn,.mode-card,.cat,.v-btn,.rost-kick,.auto-pause,.chip-btn,.peek,#copyCode,#shareCode{
+  transition:transform var(--dur-fast) var(--ease-spring), box-shadow var(--dur) var(--ease-out), background var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), filter var(--dur) var(--ease-out);
+  will-change:transform;position:relative;}
+.cta{overflow:hidden;}                       /* clip the ripple */
+@media (hover:hover){
+  .cta:not(:disabled):hover{transform:translateY(-2px);filter:brightness(1.04);box-shadow:0 18px 44px -10px rgba(225,29,42,.5);}
+  .iconbtn:hover{transform:translateY(-1px);border-color:var(--gold);color:var(--gold);}
+  .mode-card:hover,.cat:hover{transform:translateY(-2px);box-shadow:0 16px 34px -16px rgba(20,24,40,.4);}
+  .v-btn:hover{transform:translateY(-1px);filter:brightness(1.05);}
+}
+.cta:not(:disabled):active{transform:scale(.96);transition-duration:.06s;}
+.iconbtn:active,.mode-btn:active,.mode-card:active,.cat:active,.v-btn:active,.rost-kick:active,.peek:active{transform:scale(.93);transition-duration:.06s;}
+:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(30,127,224,.55);}
+.cta:focus-visible{box-shadow:0 0 0 3px rgba(30,127,224,.55),0 12px 40px -8px rgba(225,29,42,.45);}
+/* click ripple */
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.4);transform:scale(0);pointer-events:none;animation:ripple .6s var(--ease-out) forwards;mix-blend-mode:overlay;}
+@keyframes ripple{to{transform:scale(2.6);opacity:0;}}
+/* flying vote token */
+.vote-fly{position:fixed;z-index:79;width:22px;height:22px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 35% 30%,#fff,var(--gold));box-shadow:0 0 14px rgba(225,29,42,.7),0 4px 12px rgba(20,24,40,.4);}
+/* role-card light sweep + reveal sparks */
+.card-sweep{position:absolute;top:-10%;bottom:-10%;left:0;width:55%;pointer-events:none;transform:skewX(-16deg);
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.6),transparent);}
+.fx-spark{position:fixed;z-index:79;width:9px;height:9px;border-radius:50%;pointer-events:none;box-shadow:0 0 8px rgba(255,255,255,.5);}
+/* rows/cards stagger-in (added by JS as .stg, cleared after) */
+.stg{opacity:0;transform:translateY(10px);}
+/* a soft entrance for whichever screen just became active */
+.screen.active{animation:screenIn var(--dur-slow) var(--ease-out);}
+@keyframes screenIn{from{opacity:0;transform:translateY(16px) scale(.985);filter:blur(6px);}to{opacity:1;transform:none;filter:blur(0);}}
+
+@media (prefers-reduced-motion:reduce){*{transition-duration:.01ms !important;animation-duration:.01ms !important;}
+  .bg-fx{display:none;} .screen.active{animation:none;} .stg{opacity:1;transform:none;}}
 @media (max-height:680px){.hero h1{font-size:34px;} .pass-name{font-size:min(13vw,46px);}}
 
 /* ==========================================================
@@ -594,6 +648,7 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 </style>
 </head>
 <body>
+<div class="bg-fx" aria-hidden="true"><span></span><span></span><span></span></div>
 <div id="app">
 
   <!-- ===== ENTRY ===== -->
@@ -964,6 +1019,29 @@ const sfx = {
 const G = window.gsap || null;
 const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 const anim = {
+  // Cascade a list of rows/cards into place (called on screen navigation).
+  stagger(nodes){
+    if (!G || reduceMotion || !nodes || !nodes.length) return;
+    G.killTweensOf(nodes);
+    G.fromTo(nodes, { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: 0.42, ease: "power3.out", stagger: 0.045, clearProps: "transform,opacity",
+        overwrite: true });
+  },
+  // Fly a vote token from a start point to a target card, then pop the target.
+  voteFly(fromEl, toEl){
+    if (!G || reduceMotion || !fromEl || !toEl) return;
+    const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+    const dot = document.createElement("div"); dot.className = "vote-fly"; document.body.appendChild(dot);
+    G.set(dot, { left: a.left + a.width/2, top: a.top + a.height/2, xPercent:-50, yPercent:-50 });
+    G.to(dot, { left: b.left + b.width - 26, top: b.top + b.height/2, duration: 0.5, ease: "power2.inOut",
+      onComplete(){ dot.remove(); G.fromTo(toEl, { scale: 1 }, { scale: 1.04, duration: 0.14, yoyo: true, repeat: 1, ease: "power2.out" }); } });
+  },
+  // Headline reveal: blur + rise in. Tasteful, used on marquee titles.
+  headingIn(el, delay){
+    if (!G || reduceMotion || !el) return;
+    G.fromTo(el, { opacity: 0, y: 14, filter: "blur(10px)" },
+      { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.6, delay: delay || 0, ease: "power3.out", clearProps: "filter,transform,opacity" });
+  },
   // Big 3·2·1 → GO! pop before the match starts.
   count(n){
     if (!G || reduceMotion) return;
@@ -979,15 +1057,36 @@ const anim = {
       onComplete(){ wrap.classList.remove("show"); } });
     buzz(go ? [40,30,90] : 20); tone(go ? 880 : 520 + n*70, .12, "triangle", .16);
   },
-  // Role card: pop the deck + kick the word. NEVER animate the card's own
-  // transform — the flip lives on .card.flipped { transform: rotateY(180deg) },
-  // and an inline GSAP transform there would cancel the flip (card never reveals).
+  // Role card reveal — cinematic. NEVER animate the card's own transform (the flip
+  // lives on .card.flipped { transform: rotateY(180deg) }; an inline GSAP transform
+  // there would cancel the flip). We animate the deck wrapper, the word, a light
+  // sweep across the face, and a particle burst instead.
   roleReveal(card){
     if (!G || reduceMotion) return;
     const deck = (card.closest && card.closest(".deck")) || card.parentElement;
-    if (deck) G.fromTo(deck, { scale: 0.9 }, { scale: 1, duration: 0.5, ease: "elastic.out(1,0.55)", clearProps: "transform" });
+    if (deck) G.fromTo(deck, { scale: 0.9 }, { scale: 1, duration: 0.55, ease: "elastic.out(1,0.5)", clearProps: "transform",
+      onComplete(){ G.to(deck, { scale: 1.02, duration: 0.55, yoyo: true, repeat: 1, ease: "sine.inOut", clearProps: "transform" }); } }); // heartbeat
     const word = $(".the-word", card);
-    if (word) G.fromTo(word, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.2, ease: "back.out(3)", clearProps: "transform,opacity" });
+    if (word) G.fromTo(word, { scale: 0.4, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, delay: 0.22, ease: "back.out(3)", clearProps: "transform,opacity" });
+    const front = $("#roleFront");
+    if (front){
+      const sweep = document.createElement("div"); sweep.className = "card-sweep"; front.appendChild(sweep);
+      G.fromTo(sweep, { xPercent: -170 }, { xPercent: 170, duration: 0.95, delay: 0.28, ease: "power2.inOut", onComplete(){ sweep.remove(); } });
+    }
+    this._burst(card, card.classList.contains("imp") ? ["#E11D2A","#ffffff","#F5A623"] : ["#1E7FE0","#ffffff","#7048E8"]);
+  },
+  // Radial particle burst from an element's centre.
+  _burst(anchor, colors){
+    if (!G || reduceMotion || !anchor) return;
+    const r = anchor.getBoundingClientRect(), cx = r.left + r.width/2, cy = r.top + r.height/2;
+    for (let i = 0; i < 20; i++){
+      const bit = document.createElement("div"); bit.className = "fx-spark";
+      bit.style.background = colors[i % colors.length]; document.body.appendChild(bit);
+      const ang = Math.random()*Math.PI*2, dist = 70 + Math.random()*130;
+      G.set(bit, { left: cx, top: cy, xPercent:-50, yPercent:-50 });
+      G.to(bit, { left: cx + Math.cos(ang)*dist, top: cy + Math.sin(ang)*dist, opacity: 0, scale: 0.3,
+        duration: 0.7 + Math.random()*0.45, ease: "power2.out", delay: 0.22, onComplete(){ bit.remove(); } });
+    }
   },
   // Result card entrance; bounce for a win, a heavier drop for a loss.
   winner(card, won){
@@ -1059,13 +1158,31 @@ const S = {
   turnTimerHandle:null,
 };
 
+const STAGGER_SEL = { lobby:"#roster .rost", ovote:"#oVoteGrid .vrow", oresults:"#oList .rev-row", play:"#feed .pf-row", entry:"#openRooms .room-card" };
 function go(id){
   const el = $("#s-"+id);
   if (el.classList.contains("active")) return; // already showing — don't retrigger the transition
   $$(".screen").forEach(s=>s.classList.remove("active"));
   el.classList.add("active");
   const sc = $(".scroll", el); if(sc) sc.scrollTop = 0;
+  if (STAGGER_SEL[id]) anim.stagger($$(STAGGER_SEL[id], el));   // rows cascade in on navigation
 }
+// Material-style ripple on primary buttons (they clip overflow). Cheap, CSS-driven.
+document.addEventListener("pointerdown", e => {
+  if (reduceMotion) return;
+  const btn = e.target.closest && e.target.closest(".cta:not(:disabled)");
+  if (!btn) return;
+  const r = btn.getBoundingClientRect();
+  const d = Math.max(r.width, r.height) * 1.1;
+  const rip = document.createElement("span");
+  rip.className = "ripple";
+  rip.style.width = rip.style.height = d + "px";
+  rip.style.left = (e.clientX - r.left - d/2) + "px";
+  rip.style.top = (e.clientY - r.top - d/2) + "px";
+  btn.appendChild(rip);
+  setTimeout(() => rip.remove(), 620);
+}, { passive: true });
+
 function toast(msg){
   const t=$("#toast"); t.textContent=msg; t.classList.add("show");
   clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("show"),2600);
@@ -1497,6 +1614,7 @@ $("#sendClue").addEventListener("click", () => {
 /* ---------- vote ---------- */
 $("#oVoteGrid").addEventListener("click", e => {
   const btn = e.target.closest(".v-btn"); if(!btn) return;
+  anim.voteFly(btn, btn.closest(".vrow"));   // token flies to the chosen player
   send({ type:"vote", targetId: btn.dataset.id }); buzz(12);
 });
 $("#forceReveal").addEventListener("click", () => send({ type:"forceReveal" }));
@@ -1816,6 +1934,7 @@ function renderResults(firstTime){
   if (firstTime) {
     (iWon ? sfx.win : sfx.lose)(); buzz(iWon ? [40,30,80] : [80,40,80]);
     anim.winner(card, iWon);
+    anim.headingIn($("#oVerdict"), 0.15);
     if (iWon) { anim.confetti(civWin ? ["#1E7FE0","#ffffff","#12A05C","#F5A623"] : ["#E11D2A","#ffffff","#7048E8","#F5A623"]); }
     else { anim.shake(9); }
     // ---- XP: award once, then count it up ----
