@@ -101,7 +101,7 @@ try:
         host.wait_for_timeout(600)
         ok("advanced to vote screen after the round", "active" in host.locator("#s-ovote").get_attribute("class"))
         ok("vote screen lists all 3 players", host.locator("#oVoteGrid .vrow").count()==3)
-        ok("threshold text shows (Reach N votes)", "reach" in host.inner_text("#voteSub").lower())
+        ok("vote rule text shows (most-voted is out)", "most-voted" in host.inner_text("#voteSub").lower())
         ok("vote countdown timer showing", "to vote" in host.inner_text("#voteTimerTxt").lower())
         host.screenshot(path="ui_vote.png")
 

@@ -35,12 +35,12 @@ setTimeout(()=>{ console.log("TIMEOUT"); process.exit(1); }, 25000);
   ok("exactly 1 imposter", imps.length===1);
   ok("IMPOSTER WORD IS NULL (anti-cheat)", imps[0].state.round.yourWord===null);
   ok("civilians share one word", new Set(civs.map(x=>x.state.round.yourWord)).size===1);
-  ok("elimination threshold is majority (2 of 3)", A.state.round.threshold===2);
+  ok("no live votes before anyone votes", A.state.round.order.every(o=>o.votes===0));
   const impId=imps[0].youId;
 
   // Play clue rounds + vote every round until a side wins. Everyone votes the
   // imposter (imposter casts a throwaway vote on a civilian).
-  let guard=0;
+  let guard=0, checkedLive=false;
   while(A.state.status!=="results" && guard++<40){
     if(A.state.status==="playing"){
       const cur=all.find(x=>x.youId===A.state.round.turnPlayerId);
@@ -48,6 +48,14 @@ setTimeout(()=>{ console.log("TIMEOUT"); process.exit(1); }, 25000);
       await wait(120);
     } else if(A.state.status==="voting"){
       const order=A.state.round.order;
+      if(!checkedLive){
+        // one voter casts first → everyone should see that target's LIVE count tick to 1
+        checkedLive=true;
+        const voter=all.find(x=>x.youId!==impId), target=impId;
+        voter.sendj({type:"vote",targetId:target}); await wait(250);
+        const row=B.state.round.order.find(o=>o.id===target);
+        ok("live vote count shows on the target (1)", row && row.votes===1);
+      }
       all.forEach(x=>{
         const me=order.find(o=>o.id===x.youId);
         if(me && !me.dead){

@@ -100,17 +100,23 @@ the word and hiding it in CSS.**
 lobby → [ playing → voting ]* → results → (again → playing | backToLobby → lobby)
 ```
 
-**Game loop (vote every round, elimination):** a game is ONE `room.round` that
-spans many rounds. Each round = one clue pass (every alive player types one word,
-`skipUnavailableTurns` skips dead/disconnected) → a **vote phase**. In the vote
-phase everyone alive votes; `resolveVote` adds those votes to the cumulative
-`round.tally`, then eliminates every alive player whose total ≥ `voteThreshold`
-(a MAJORITY of the still-alive: `floor(alive/2)+1`, recomputed as people die).
-Win check: **civilians win** when all imposters are eliminated; **imposters win**
-when `aliveImposters >= aliveCivilians`; otherwise `roundNo++` and a new clue
-pass starts (the tally carries over). `endGame` builds the reveal. Key round
-fields: `imposterIds`, `order`, `dead` (Set), `tally` (Map, cumulative),
+**Game loop (vote every round, PLURALITY elimination):** a game is ONE `room.round`
+that spans many rounds. Each round = one clue pass (every alive player types one
+word, `skipUnavailableTurns` skips dead/disconnected) → a **vote phase**. In the
+vote phase everyone alive votes; `resolveVote` eliminates the SINGLE most-voted
+alive player this round (plurality). A tie for the top → **nobody** goes out.
+Example (4 players): 2 votes on A, 1 on B, 1 on C → only A is out; if A were a
+civilian, the game continues next round with the rest. `voteCounts(room)` builds
+the per-target tally for the current round; `round.tally` (Map) still accumulates
+across rounds but only for the end-of-game reveal totals — it does NOT drive
+elimination anymore (there is no cumulative threshold; the old `voteThreshold`
+helper was removed). Win check: **civilians win** when all imposters are
+eliminated; **imposters win** when `aliveImposters >= aliveCivilians`; otherwise
+`roundNo++` and a new clue pass starts. `endGame` builds the reveal. Key round
+fields: `imposterIds`, `order`, `dead` (Set), `tally` (Map, reveal totals only),
 `roundNo`, `deaths`. Votes are cast on ALIVE players only; the dead spectate.
+`order[].votes` in state is the **live current-round** count (updates as people
+vote) so each player shows a real-time vote badge during the vote phase.
 
 Room state lives in an in-memory `Map`. Rooms are deleted 60s after the last
 player disconnects.
@@ -138,6 +144,7 @@ Client → server:
 | `clue` | current turn, alive only | `{words:[...]}` |
 | `vote` | alive players, voting phase | `{targetId}` — must be an alive player |
 | `chat` | anyone, if `settings.chat` on | `{text}` — lobby/playing/voting; trimmed to 160, ~350ms/msg rate limit |
+| `voice` | anyone, in-game | `{audio, mime}` — base64 push-to-talk clip (≤~300KB, ~8s), relayed to the rest of the room, NOT stored in state |
 | `kick` | host | `{targetId}` — removes a player, drops them from a running game |
 | `forceReveal` | host, voting | — (resolve this round's vote now) |
 | `again` | host, results | — |
@@ -148,7 +155,10 @@ Server → client:
 - `state` `{...}` — full sanitized snapshot, broadcast on every change. Always
   carries `chat` (last 50 msgs, or `[]` when the host disabled chat) and, in the
   lobby, `autoStartAt`. In play/vote the round carries `order[]` (with per-player
-  `dead`/`votes`/`connected`), `roundNo`, `threshold`, `yourAlive`.
+  `dead`/`votes` (live current-round count)/`connected`), `roundNo`, `yourAlive`.
+- `voice` `{from, name, mime, audio}` — a relayed push-to-talk clip; pushed once
+  to everyone except the sender (never part of `state`, so it isn't re-broadcast).
+  Client autoplays it (`playVoice`) and shows a "<name> is talking" pill.
 - `kicked` — sent to a removed player just before their socket is closed; the
   client clears its session (so it won't auto-rejoin) and returns to entry.
 - `error` `{message}` — toast on client
@@ -211,8 +221,10 @@ turns typing **one clue word** (one per player, alive players only), then everyo
 votes — see the "Game loop" under the state machine for the full elimination /
 win-condition mechanic. The play screen (`playFeedHtml`) shows a per-player status
 row (their clue / "…" typing / "Up next" / "Killed"); the vote screen shows each
-player's clue, a running cumulative-vote badge, and Vote/Voted buttons; results
-shows a coloured win/lose card + the reveal (role + Dead tags).
+player's clue, a **live current-round vote badge** (`order[].votes`, updates in
+real time as people vote), and Vote/Voted buttons; results shows a coloured
+win/lose card + the reveal (role + Dead tags). An in-game push-to-talk mic FAB
+(`#pttBtn`, bottom-right, hold to record) sends a short voice clip to the room.
 
 Each vote phase **auto-resolves after `VOTE_SECONDS` (30s, overridable via env
 var for tests)** even if not everyone voted — `scheduleVoteTimeout`. The timer

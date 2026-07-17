@@ -97,6 +97,7 @@ function sanitize(room, pid) {
     const amImp = r.imposterIds.has(pid);
     const turnId = r.order[r.turnIndex];
     const alive = new Set(aliveIds(room));
+    const liveVotes = room.status === "voting" ? voteCounts(room) : new Map(); // this round's live tally
     base.round = {
       phase: room.status,                         // "playing" | "voting"
       turnPlayerId: room.status === "playing" ? turnId : null,
@@ -104,8 +105,7 @@ function sanitize(room, pid) {
       turnDeadline: room.status === "playing" ? (r.turnDeadline || null) : null,  // ms — per-turn 40s clock
       roundNo: r.roundNo,
       imposters: r.imposterIds.size,
-      threshold: voteThreshold(room),             // votes needed to eliminate someone
-      // roster in turn order — each player's alive/dead + connection + cumulative votes.
+      // roster in turn order — each player's alive/dead + connection + LIVE votes this round.
       // NOTE: never leak who the imposter is here.
       order: r.order.map(id => {
         const p = room.players.get(id);
@@ -113,7 +113,7 @@ function sanitize(room, pid) {
           id, name: p ? p.name : "?",
           connected: p ? p.connected : false,
           dead: r.dead.has(id),
-          votes: r.tally.get(id) || 0,            // cumulative votes received (the badge)
+          votes: liveVotes.get(id) || 0,          // LIVE votes this round (updates as people vote)
           gone: !p,                               // kicked / left entirely
         };
       }),
@@ -188,8 +188,6 @@ function startRound(room) {
 const aliveIds = room => room.round.order.filter(id => room.players.has(id) && !room.round.dead.has(id));
 const aliveImposters = room => aliveIds(room).filter(id => room.round.imposterIds.has(id));
 const aliveCivilians = room => aliveIds(room).filter(id => !room.round.imposterIds.has(id));
-// majority of the players still alive (5 alive -> 3, 7 -> 4). Recomputed as people die.
-const voteThreshold = room => Math.floor(aliveIds(room).length / 2) + 1;
 // can act this instant: alive, connected, and (for turns) it's a real player
 const isAvailable = (room, id) => {
   const p = room.players.get(id);
@@ -293,16 +291,31 @@ function advanceTurn(room) {
   skipUnavailableTurns(room);
 }
 
-// Tally this phase's votes into the running totals, eliminate anyone at/over the
-// majority threshold, then check win conditions. Civilians win when all imposters
-// are out; imposters win when they equal/outnumber remaining civilians; otherwise
-// a new clue round starts (cumulative votes carry over).
+// Resolve a voting phase under PLURALITY: the single most-voted alive player is
+// eliminated (a tie for the top → nobody goes out), then check win conditions.
+// Civilians win when all imposters are out; imposters win when they equal/outnumber
+// remaining civilians; otherwise a new clue round starts.
+// count THIS round's votes: targetId -> number of votes
+function voteCounts(room) {
+  const c = new Map();
+  for (const target of room.round.votes.values()) c.set(target, (c.get(target) || 0) + 1);
+  return c;
+}
+
 function resolveVote(room) {
   const r = room.round;
   if (r.voteTimer) { clearTimeout(r.voteTimer); r.voteTimer = null; }
-  for (const target of r.votes.values()) r.tally.set(target, (r.tally.get(target) || 0) + 1);
-  const threshold = voteThreshold(room);
-  const eliminated = aliveIds(room).filter(id => (r.tally.get(id) || 0) >= threshold);
+  const counts = voteCounts(room);
+  for (const [id, v] of counts) r.tally.set(id, (r.tally.get(id) || 0) + v); // running total, for the reveal
+  // Eliminate the single player with the MOST votes this round (plurality). A tie
+  // for the top → nobody goes out. (e.g. a=2, b=1, c=1 → a is out; a=2, b=2 → nobody.)
+  let topId = null, max = 0, tie = false;
+  for (const id of aliveIds(room)) {
+    const v = counts.get(id) || 0;
+    if (v > max) { max = v; topId = id; tie = false; }
+    else if (v === max && max > 0) tie = true;
+  }
+  const eliminated = (topId && max > 0 && !tie) ? [topId] : [];
   for (const id of eliminated) { r.dead.add(id); r.deaths.push({ id, roundNo: r.roundNo }); }
   r.lastEliminated = eliminated;
 
@@ -523,6 +536,26 @@ wss.on("connection", (ws) => {
       room.chat.push({ id: uid(), name: p.name, text, ts: nowMs });
       if (room.chat.length > CHAT_KEEP) room.chat = room.chat.slice(-CHAT_KEEP);
       broadcast(room);
+      return;
+    }
+
+    if (t === "voice") {
+      // push-to-talk walkie-talkie: relay a short recorded clip to everyone else in
+      // the room. Not stored in state (broadcast() would re-send it) — pushed once.
+      if (room.status === "lobby") return;               // only meaningful in-game
+      const p = room.players.get(pid);
+      if (!p) return;
+      const nowMs = now();
+      if (p.lastVoice && nowMs - p.lastVoice < 300) return; // light flood guard
+      p.lastVoice = nowMs;
+      const audio = String(msg.audio || "");
+      if (!audio || audio.length > 400000) return;        // ~300KB cap on the clip
+      const payload = JSON.stringify({ type: "voice", from: pid, name: p.name, mime: String(msg.mime || "audio/webm").slice(0, 40), audio });
+      for (const o of room.players.values()) {
+        if (o.id !== pid && o.connected && o.ws.readyState === 1) {
+          try { o.ws.send(payload); } catch (e) {}
+        }
+      }
       return;
     }
 

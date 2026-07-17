@@ -408,6 +408,22 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
   padding:12px 18px;border-radius:100px;transition:.3s cubic-bezier(.2,1.2,.4,1);box-shadow:0 14px 30px -12px rgba(20,24,40,.5);max-width:88%;text-align:center;}
 .toast.show{transform:translateX(-50%) translateY(0);}
 
+/* ---- push-to-talk (hold to speak) ---- */
+.ptt{position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(var(--safe-b) + 152px);z-index:55;
+  display:flex;flex-direction:column;align-items:center;gap:2px;width:64px;height:64px;justify-content:center;
+  border:none;border-radius:50%;background:var(--gold);color:#fff;cursor:pointer;
+  box-shadow:0 12px 26px -8px rgba(225,29,42,.55);touch-action:none;-webkit-user-select:none;user-select:none;
+  transition:transform .12s ease, box-shadow .12s ease, background .12s ease;}
+.ptt .ptt-lbl{font-family:var(--ff-body);font-weight:700;font-size:8px;letter-spacing:.02em;line-height:1;opacity:.9;}
+.ptt:active,.ptt.rec{transform:scale(1.12);background:#b3111c;box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}
+.ptt.rec{animation:pttPulse 1s ease-in-out infinite;}
+@keyframes pttPulse{0%,100%{box-shadow:0 0 0 8px rgba(225,29,42,.22),0 12px 26px -8px rgba(225,29,42,.6);}50%{box-shadow:0 0 0 15px rgba(225,29,42,.05),0 12px 26px -8px rgba(225,29,42,.6);}}
+.ptt-speaking{position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);bottom:calc(var(--safe-b) + 224px);z-index:55;
+  display:flex;align-items:center;gap:7px;background:#17181F;border:1px solid rgba(255,255,255,.12);color:#fff;
+  font-size:12px;font-weight:600;padding:7px 12px;border-radius:100px;box-shadow:0 10px 24px -12px rgba(20,24,40,.6);}
+.ptts-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);animation:pttPulse2 .8s ease-in-out infinite;}
+@keyframes pttPulse2{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
 /* ---- lobby auto-start banner ---- */
 .auto-banner{display:flex;align-items:center;justify-content:center;gap:9px;margin:14px 0 2px;padding:12px;border-radius:var(--r-md);
   background:linear-gradient(180deg,rgba(225,29,42,.14),rgba(225,29,42,.04));border:1px solid rgba(225,29,42,.45);
@@ -807,6 +823,13 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 <div class="conn" id="conn">Reconnecting…</div>
 <div class="toast" id="toast"></div>
 
+<!-- ===== PUSH-TO-TALK (in-game, bottom-right) ===== -->
+<button class="ptt hidden" id="pttBtn" title="Hold to talk">
+  <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path fill="currentColor" d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
+  <span class="ptt-lbl" id="pttLbl">Hold to talk</span>
+</button>
+<div class="ptt-speaking hidden" id="pttSpeaking"><span class="ptts-dot"></span><span id="pttSpeakingTxt"></span> is talking</div>
+
 <!-- ===== CHAT DRAWER (shared by lobby + play) ===== -->
 <div class="chat-scrim" id="chatScrim"></div>
 <div class="chat-sheet" id="chatSheet">
@@ -938,6 +961,7 @@ function connect(then){
       if (S.rejoinPending) { bailToEntry("That game ended — start a new one"); return; }
       toast(m.message); return;
     }
+    if (m.type === "voice") { playVoice(m); return; }
     if (m.type === "state") { S.prev = S.state; S.state = m; render(); }
   };
   ws.onclose = () => {
@@ -957,6 +981,76 @@ function connect(then){
   ws.onerror = () => {};
 }
 function send(o){ if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); }
+
+/* ---------- push-to-talk voice (walkie-talkie) ---------- */
+const PTT = { stream:null, rec:null, chunks:[], recording:false, held:false, maxTimer:null };
+async function pttStart(){
+  if (PTT.recording || PTT.held) return;
+  if (!navigator.mediaDevices || !window.MediaRecorder) { toast("Voice isn't supported on this browser"); return; }
+  PTT.held = true;                               // set synchronously so a fast release can cancel
+  $("#pttBtn").classList.add("rec"); $("#pttLbl").textContent = "Release";
+  buzz(14);
+  try {
+    if (!PTT.stream) PTT.stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  } catch(e){ PTT.held = false; $("#pttBtn").classList.remove("rec"); $("#pttLbl").textContent = "Hold to talk"; toast("Allow microphone access to talk"); return; }
+  if (!PTT.held) { $("#pttBtn").classList.remove("rec"); $("#pttLbl").textContent = "Hold to talk"; return; } // released during mic warm-up
+  let mime = "audio/webm";
+  if (window.MediaRecorder && !MediaRecorder.isTypeSupported(mime)) mime = MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+  try { PTT.rec = mime ? new MediaRecorder(PTT.stream, { mimeType:mime }) : new MediaRecorder(PTT.stream); }
+  catch(e){ PTT.rec = new MediaRecorder(PTT.stream); }
+  PTT.chunks = [];
+  PTT.rec.ondataavailable = e => { if (e.data && e.data.size) PTT.chunks.push(e.data); };
+  PTT.rec.onstop = () => {
+    const blob = new Blob(PTT.chunks, { type: PTT.rec.mimeType || "audio/webm" });
+    if (blob.size < 700) return;                 // ignore an accidental tap
+    const fr = new FileReader();
+    fr.onload = () => {
+      const b64 = String(fr.result).split(",")[1] || "";
+      if (b64.length > 400000) { toast("That was too long — keep it short"); return; }
+      send({ type:"voice", audio:b64, mime: blob.type });
+    };
+    fr.readAsDataURL(blob);
+  };
+  PTT.recording = true;
+  try { PTT.rec.start(); } catch(e){ PTT.recording = false; return; }
+  clearTimeout(PTT.maxTimer);
+  PTT.maxTimer = setTimeout(pttStop, 8000);      // hard cap 8s per clip
+}
+function pttStop(){
+  PTT.held = false;
+  clearTimeout(PTT.maxTimer);
+  $("#pttBtn").classList.remove("rec"); $("#pttLbl").textContent = "Hold to talk";
+  if (!PTT.recording) return;
+  PTT.recording = false;
+  buzz(8);
+  try { if (PTT.rec && PTT.rec.state !== "inactive") PTT.rec.stop(); } catch(e){}
+}
+function playVoice(m){
+  try {
+    const audio = new Audio("data:" + (m.mime || "audio/webm") + ";base64," + m.audio);
+    const ind = $("#pttSpeaking");
+    $("#pttSpeakingTxt").textContent = m.name || "Someone";
+    ind.classList.remove("hidden");
+    const hide = () => ind.classList.add("hidden");
+    audio.onended = hide; audio.onerror = hide;
+    audio.play().catch(()=>{ /* autoplay blocked until first interaction */ hide(); });
+  } catch(e){}
+}
+(function wirePTT(){
+  const btn = $("#pttBtn");
+  const down = e => { e.preventDefault(); pttStart(); };
+  const up = e => { e.preventDefault(); pttStop(); };
+  btn.addEventListener("pointerdown", down);
+  btn.addEventListener("pointerup", up);
+  btn.addEventListener("pointercancel", up);
+  btn.addEventListener("pointerleave", up);
+  window.addEventListener("blur", up);
+})();
+function refreshVoiceBtn(){
+  const inGame = S.state && (S.state.status === "playing" || S.state.status === "voting" || S.state.status === "results");
+  $("#pttBtn").classList.toggle("hidden", !inGame);
+  if (!inGame) { pttStop(); $("#pttSpeaking").classList.add("hidden"); }
+}
 
 /* ---------- entry ---------- */
 $("#mCreate").addEventListener("click", () => {
@@ -1211,6 +1305,7 @@ function render(){
   const nowChat = s.chat ? s.chat.length : 0;
   if (nowChat > prevChat && !S.chatOpen) sfx.clue();
   refreshChatButtons();
+  refreshVoiceBtn();
   if (S.chatOpen) renderChat();
 
   if (s.status === "lobby") {
@@ -1218,15 +1313,19 @@ function render(){
     renderLobby(); go("lobby");
   }
   else if (s.status === "playing") {
-    if (prevStatus !== "playing") {           // fresh round -> show role card
+    // Reveal the role card only at the START of a NEW GAME (from lobby / a finished
+    // game / a fresh reconnect) — NOT between rounds. New rounds arrive from
+    // "voting", and re-showing the card there was eating people's turns.
+    const newGame = prevStatus === "lobby" || prevStatus === "results" || prevStatus === undefined;
+    if (newGame) {
       S.roleSeen = false; S.peeked = true;
       $("#roleCard").classList.remove("flipped","civ","imp");
       $("#roleGo").classList.add("hidden");
       go("role");
     } else {
       renderPlay();
-      if ($("#s-role").classList.contains("active") && S.roleSeen) go("play");
-      else if (!$("#s-role").classList.contains("active")) go("play");
+      // don't yank a player off the role card if they haven't tapped "I'm ready" yet
+      if (!$("#s-role").classList.contains("active")) go("play");
     }
   }
   else if (s.status === "voting") { renderVote(); go("ovote"); }
@@ -1395,7 +1494,7 @@ function renderVote(){
   $("#voteRoundTop").textContent = `Round ${r.roundNo}`;
   $("#voteRoundChip").textContent = `Round ${r.roundNo}`;
   $("#voteImpChip").textContent = `${r.imposters} Imposter${r.imposters>1?"s":""}`;
-  $("#voteSub").innerHTML = `Reach <b>${r.threshold} vote${r.threshold>1?"s":""}</b> and you're out! Votes add up across rounds.`;
+  $("#voteSub").innerHTML = `The <b>most-voted</b> player is out this round. A tie means nobody goes out.`;
 
   const g = $("#oVoteGrid"); g.innerHTML = "";
   r.order.forEach((p) => {

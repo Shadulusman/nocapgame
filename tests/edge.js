@@ -9,7 +9,8 @@ function client(name){
   ws.on("message",raw=>{const m=JSON.parse(raw);
     if(m.type==="joined"){ws.youId=m.youId;ws.code=m.code;}
     if(m.type==="state") ws.state=m;
-    if(m.type==="kicked") ws.wasKicked=true;});
+    if(m.type==="kicked") ws.wasKicked=true;
+    if(m.type==="voice"){ ws.voices=ws.voices||[]; ws.voices.push(m); }});
   ws.sendj=o=>{ if(ws.readyState===1) ws.send(JSON.stringify(o)); };
   return ws;
 }
@@ -21,7 +22,7 @@ async function room(n, names){
 }
 const playToVote = async cs => { let g=0; while(cs[0].state.status==="playing" && g++<25){
   const cur=cs.find(x=>x.youId===cs[0].state.round.turnPlayerId); if(cur) cur.sendj({type:"clue",words:["w"]}); await wait(120); } };
-setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},45000);
+setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},70000);
 (async()=>{
   await wait(400);
 
@@ -50,17 +51,34 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},45000);
   ok("imposters win at parity", cs[0].state.results.winner==="imposters");
   cs.forEach(c=>c.close()); await wait(300);
 
-  // ---- NO WINNER -> NEXT ROUND (votes accumulate) ----
+  // ---- PLURALITY TIE -> NOBODY OUT -> NEXT ROUND ----
   cs = await room(5,["G","H","I","J","K"]);
   cs[0].sendj({type:"settings",settings:{imposters:1}}); await wait(150);
   cs[0].sendj({type:"start"}); await wait(400);
   await playToVote(cs);
   ok("round 1 vote reached (5 players)", cs[0].state.status==="voting" && cs[0].state.round.roundNo===1);
-  ok("threshold is 3 of 5", cs[0].state.round.threshold===3);
-  // only 2 players vote one target -> below threshold 3 -> nobody out -> next round
-  const t = cs[1].youId;
-  cs[2].sendj({type:"vote",targetId:t}); cs[3].sendj({type:"vote",targetId:t}); await wait(1500);
-  ok("no elimination below threshold -> advances to round 2", cs[0].state.status==="playing" && cs[0].state.round.roundNo===2);
+  // split the vote 2-2 across two targets (5th abstains -> vote times out) -> tie at the top -> nobody out
+  const t1 = cs[1].youId, t2 = cs[2].youId;
+  cs[0].sendj({type:"vote",targetId:t1}); cs[3].sendj({type:"vote",targetId:t1});
+  cs[1].sendj({type:"vote",targetId:t2}); cs[4].sendj({type:"vote",targetId:t2}); await wait(1500);
+  ok("a tie for the top eliminates nobody -> advances to round 2", cs[0].state.status==="playing" && cs[0].state.round.roundNo===2);
+  ok("nobody eliminated on a tie", cs[0].state.round.order.filter(o=>!o.dead).length===5);
+  cs.forEach(c=>c.close()); await wait(300);
+
+  // ---- PLURALITY: the single most-voted alive player is eliminated ----
+  cs = await room(5,["L","M","N","O","P"]);
+  cs[0].sendj({type:"settings",settings:{imposters:1}}); await wait(150);
+  cs[0].sendj({type:"start"}); await wait(400);
+  await playToVote(cs);
+  const pImp = cs.find(x=>x.state.round.yourRole==="imposter").youId;
+  const pv = cs.find(x=>x.youId!==pImp).youId;        // a civilian gets a clear plurality (game continues)
+  const stray = cs.find(x=>x.youId!==pv && x.youId!==pImp).youId;
+  const voters = cs.filter(x=>x.youId!==pv);          // no self-votes on the target
+  voters[0].sendj({type:"vote",targetId:pv}); voters[1].sendj({type:"vote",targetId:pv});
+  voters[2].sendj({type:"vote",targetId:stray}); await wait(1500);   // pv=2, stray=1 -> pv is out
+  ok("plurality: the most-voted player is eliminated", cs[0].state.status==="playing");
+  const pvRow = cs[0].state.round.order.find(o=>o.id===pv);
+  ok("eliminated player is marked dead, others alive", pvRow && pvRow.dead===true && cs[0].state.round.order.filter(o=>!o.dead).length===4);
   cs.forEach(c=>c.close()); await wait(300);
 
   // ---- VOTE TIMEOUT AUTO-RESOLVES (nobody votes) ----
@@ -187,6 +205,16 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},45000);
   c3.close(); await wait(400);
   ok("auto-start countdown cancels back under 3", cs[0].state.autoStartAt==null);
   cs.slice(0,2).forEach(c=>c.close()); await wait(200);
+
+  // ---- PUSH-TO-TALK VOICE RELAY ----
+  cs = await room(3,["Vi","Wu","Xi"]);
+  cs[0].sendj({type:"start"}); await wait(400);      // voice only relays in-game
+  const clip = Buffer.from("fake-audio-bytes").toString("base64");
+  cs[0].sendj({type:"voice", audio:clip, mime:"audio/webm"}); await wait(250);
+  ok("voice clip relayed to the other players", (cs[1].voices||[]).length===1 && (cs[2].voices||[]).length===1);
+  ok("relayed clip carries sender name + audio", cs[1].voices[0].name==="Vi" && cs[1].voices[0].audio===clip);
+  ok("sender does NOT receive its own voice clip", (cs[0].voices||[]).length===0);
+  cs.forEach(c=>c.close()); await wait(200);
 
   // ---- CHAT ----
   cs = await room(3,["Ann","Bob","Cid"]);
