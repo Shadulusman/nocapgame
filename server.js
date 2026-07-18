@@ -66,6 +66,7 @@ function makeRoom(hostId) {
       chat: true,
     },
     players: new Map(), // id -> {id,name,ws,connected,alive}
+    scores: new Map(),   // id -> cumulative session points (persists across "play again")
     round: null,
     chat: [],            // {id,name,text,ts} — last CHAT_KEEP kept
     autoStartAt: null,   // ms timestamp the lobby auto-start fires, or null
@@ -357,6 +358,16 @@ function endGame(room, winner) {
   const r = room.round;
   if (r.voteTimer) { clearTimeout(r.voteTimer); r.voteTimer = null; }
   clearTurnTimer(room);
+  // Award session points (additive — doesn't touch win conditions). Persisted on
+  // room.scores across "play again" so the room has a live standings board.
+  const gain = {};
+  r.order.forEach(id => {
+    const won = r.imposterIds.has(id) === (winner === "imposters");
+    const survived = !r.dead.has(id);
+    const pts = 10 + (won ? 100 : 0) + (survived ? 30 : 0);
+    gain[id] = pts;
+    room.scores.set(id, (room.scores.get(id) || 0) + pts);
+  });
   r.result = {
     winner,                                  // "civilians" | "imposters"
     word: r.word,
@@ -370,8 +381,13 @@ function endGame(room, winner) {
         role: r.imposterIds.has(id) ? "imposter" : "civilian",
         dead: r.dead.has(id),
         votes: r.tally.get(id) || 0,
+        gained: gain[id] || 0,               // points earned this game
       };
     }),
+    // live session leaderboard (every player still in the room, ranked)
+    standings: [...room.players.values()]
+      .map(p => ({ id: p.id, name: p.name, score: room.scores.get(p.id) || 0, gained: gain[p.id] || 0 }))
+      .sort((a, b) => b.score - a.score),
     clues: r.clues.map(c => ({ name: c.name, words: c.words })),
   };
   room.status = "results";

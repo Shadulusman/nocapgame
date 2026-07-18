@@ -37,6 +37,13 @@ setTimeout(()=>{console.log("TIMEOUT");process.exit(1);},70000);
   ok("voting out the imposter ends the game", cs[0].state.status==="results");
   ok("civilians win", cs[0].state.results.winner==="civilians");
   ok("caught imposter marked dead", cs[0].state.results.players.find(p=>p.id===impId).dead===true);
+  // session scoring: winners out-score the caught imposter, standings sorted desc
+  const st = cs[0].state.results.standings;
+  ok("results include a session leaderboard", Array.isArray(st) && st.length===3);
+  ok("standings are sorted high→low", st[0].score>=st[st.length-1].score);
+  ok("a surviving winner out-scores the caught imposter",
+     st.find(p=>p.id!==impId).score > st.find(p=>p.id===impId).score);
+  ok("this game's points are reported", cs[0].state.results.players.every(p=>typeof p.gained==="number"));
   cs.forEach(c=>c.close()); await wait(300);
 
   // ---- IMPOSTERS WIN when they reach parity (a civilian gets voted out) ----

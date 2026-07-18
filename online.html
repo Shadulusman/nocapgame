@@ -239,6 +239,18 @@ h1,h2,h3{margin:0; font-family:var(--ff-disp); letter-spacing:-.02em; font-weigh
 .word-reveal .l{font-family:var(--ff-mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);}
 .word-reveal .w{font-family:var(--ff-disp);font-weight:800;font-size:clamp(26px,8vw,38px);color:var(--gold-ink);margin-top:8px;letter-spacing:-.02em;}
 .word-reveal .c{font-size:13px;color:var(--muted);margin-top:8px;}
+/* session leaderboard */
+.lb-list{display:flex;flex-direction:column;gap:8px;}
+.lb-row{display:flex;align-items:center;gap:12px;padding:11px 13px;background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);will-change:transform;}
+.lb-rank{flex:none;width:26px;text-align:center;font-family:var(--ff-disp);font-weight:800;font-size:16px;color:var(--muted-2);}
+.lb-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-family:var(--ff-disp);font-weight:700;font-size:14px;color:#fff;}
+.lb-nm{flex:1;min-width:0;font-family:var(--ff-disp);font-weight:700;font-size:15px;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-gain{flex:none;font-family:var(--ff-body);font-weight:800;font-size:11px;color:#0b7a44;background:rgba(18,160,92,.14);padding:2px 8px;border-radius:100px;}
+.lb-score{flex:none;font-family:var(--ff-disp);font-weight:800;font-size:16px;color:var(--cream);min-width:44px;text-align:right;}
+.lb-row.me{border-color:rgba(30,127,224,.5);background:linear-gradient(180deg,rgba(30,127,224,.07),transparent);}
+.lb-row.top1{border-color:rgba(245,166,35,.6);background:linear-gradient(180deg,rgba(245,166,35,.14),transparent);box-shadow:0 8px 26px -14px rgba(245,166,35,.6);}
+.lb-row.top1 .lb-rank{color:#E8A317;} .lb-row.top2 .lb-rank{color:#9AA3B2;} .lb-row.top3 .lb-rank{color:#C08457;}
+.lb-row.top1 .lb-score{color:#B9791A;}
 
 /* ---------- Sheet (rules/paywall) ---------- */
 .sheet-scrim{position:fixed;inset:0;background:rgba(2,5,12,.34);backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:.28s;z-index:50;}
@@ -666,8 +678,12 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
 /* per-turn countdown pill (max 40s) */
 .turn-clock{display:inline-flex;align-items:center;gap:7px;background:#16181F;color:#fff;font-family:var(--ff-mono);font-weight:700;font-size:14px;padding:6px 12px;border-radius:100px;}
 .turn-clock .tc-dot{width:8px;height:8px;border-radius:50%;background:#F5B547;}
+.tc-ring{transform:rotate(-90deg);}
+.tc-ring circle{fill:none;stroke-width:4;}
+.tc-ring .tc-track{stroke:rgba(255,255,255,.18);}
+.tc-ring .tc-prog{stroke:#F5B547;stroke-linecap:round;stroke-dasharray:94.25;stroke-dashoffset:0;transition:stroke-dashoffset .25s linear;}
 .turn-clock.warn{background:var(--gold);}
-.turn-clock.warn .tc-dot{background:#fff;animation:blink .7s ease-in-out infinite;}
+.turn-clock.warn .tc-prog{stroke:#fff;}
 /* online/offline dot shown next to players during the game */
 .on-dot{flex:none;width:9px;height:9px;border-radius:50%;background:var(--ok);margin-left:2px;}
 .on-dot.off{background:var(--muted-2);}
@@ -857,7 +873,7 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
     <div class="topbar">
       <div style="display:flex;align-items:center;gap:10px;">
         <div class="stage-count" id="playRound">Round 1</div>
-        <div class="turn-clock hidden" id="turnClock"><span class="tc-dot"></span><span id="turnClockTxt">0:40</span></div>
+        <div class="turn-clock hidden" id="turnClock"><svg class="tc-ring" viewBox="0 0 36 36" width="17" height="17"><circle class="tc-track" cx="18" cy="18" r="15"/><circle class="tc-prog" id="turnRing" cx="18" cy="18" r="15"/></svg><span id="turnClockTxt">0:40</span></div>
       </div>
       <div class="topbar-actions">
         <button class="iconbtn chat-btn hidden" id="playChatBtn" aria-label="Chat">
@@ -948,7 +964,9 @@ body.has-chatbar .footer{padding-bottom:12px;}   /* chat bar handles the safe ar
         <div class="l">The secret word was</div>
         <div class="w" id="oWord">—</div>
       </div>
-      <div class="sec-head" style="margin-top:6px;"><h3 style="font-size:14px;">The reveal</h3></div>
+      <div class="sec-head" style="margin-top:14px;"><h3 style="font-size:14px;">Session standings</h3><span class="hint" id="lbHint"></span></div>
+      <div class="lb-list" id="oStandings"></div>
+      <div class="sec-head" style="margin-top:14px;"><h3 style="font-size:14px;">The reveal</h3></div>
       <div class="reveal-list" id="oList"></div>
       <div style="height:10px"></div>
     </div>
@@ -1861,11 +1879,14 @@ function renderPlay(){
   const clock = $("#turnClock");
   if (r.turnDeadline) {
     clock.classList.remove("hidden");
+    const CIRC = 94.25;   // 2πr for r=15
     const tickT = () => {
       const left = Math.max(0, r.turnDeadline - Date.now());
       const secs = Math.ceil(left/1000);
       $("#turnClockTxt").textContent = "0:" + String(secs).padStart(2,"0");
       clock.classList.toggle("warn", secs<=10);
+      const ring = $("#turnRing");
+      if (ring) ring.style.strokeDashoffset = (CIRC * (1 - Math.min(1, left/40000))).toFixed(1);
       if (left<=0) clearInterval(S.turnTimerHandle);
     };
     tickT(); S.turnTimerHandle = setInterval(tickT, 250);
@@ -1985,16 +2006,15 @@ function renderResults(firstTime){
     anim.headingIn($("#oVerdict"), 0.15);
     if (iWon) { anim.confetti(civWin ? ["#1E7FE0","#ffffff","#12A05C","#F5A623"] : ["#E11D2A","#ffffff","#7048E8","#F5A623"]); }
     else { anim.shake(9); }
-    // ---- XP: award once, then count it up ----
-    let gain = 25;                       // showed up
-    if (iWon) gain += 100;               // your side won
-    if (survived) gain += 40;            // still standing
+    // ---- XP: award once (server decides the amount), then count it up ----
+    const gain = (me && typeof me.gained === "number") ? me.gained : (25 + (iWon?100:0) + (survived?40:0));
     const before = loadXP(), after = awardXP(gain);
     anim.countUp($("#xpGain"), 0, gain, "+");
     anim.countUp($("#xpTotal"), before, after);
     $("#xpLevel").textContent = xpLevel(after);
     anim.bar($("#xpBarFill"), Math.round(xpIntoLevel(after) / 500 * 100));
   }
+  renderStandings(res, firstTime);
 
   $("#oWord").textContent = res.word;
   const list = $("#oList"); list.innerHTML = "";
@@ -2013,6 +2033,32 @@ function renderResults(firstTime){
   $("#oAgain").classList.toggle("hidden", !s.isHost);
   $("#oLobby").classList.toggle("hidden", !s.isHost);
   $("#oNote").textContent = s.isHost ? "" : "Waiting for the host to start again";
+}
+
+// Live session leaderboard on the results screen. Rows animate their rank change
+// (GSAP Flip, matched by data-flip-id) and cascade in on first show.
+function renderStandings(res, firstTime){
+  const box = $("#oStandings"); if (!box) return;
+  const st = res.standings || [];
+  $("#lbHint").textContent = st.length ? `${st.length} player${st.length>1?"s":""}` : "";
+  const flipState = (window.Flip && !reduceMotion) ? Flip.getState("#oStandings .lb-row") : null;
+  box.innerHTML = "";
+  st.forEach((p, i) => {
+    const you = p.id === S.youId;
+    const rankCls = i===0?" top1":i===1?" top2":i===2?" top3":"";
+    const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":(i+1);
+    const row = document.createElement("div");
+    row.className = "lb-row" + rankCls + (you?" me":"");
+    row.dataset.flipId = p.id;
+    row.innerHTML = `<span class="lb-rank">${medal}</span>
+      <span class="lb-av" style="background:${avColor(p.name)}">${initials(p.name)}</span>
+      <span class="lb-nm">${escapeHtml(p.name)}${you?' <span class="pf-you">You</span>':''}</span>
+      ${p.gained?`<span class="lb-gain">+${p.gained}</span>`:""}
+      <span class="lb-score">${p.score}</span>`;
+    box.appendChild(row);
+  });
+  if (flipState) Flip.from(flipState, { duration: 0.55, ease: "power2.inOut", absolute: true });
+  else if (firstTime) anim.stagger($$("#oStandings .lb-row"));
 }
 
 /* ---------- resume session / open a shared room link ---------- */
